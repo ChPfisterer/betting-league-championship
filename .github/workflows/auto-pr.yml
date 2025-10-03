@@ -1,0 +1,334 @@
+name: Auto Create Pull Request
+
+on:
+  push:
+    branches:
+      - 'feature/T*'
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Extract task info from branch
+        id: extract-info
+        run: |
+          BRANCH_NAME="${{ github.ref_name }}"
+          TASK_ID=$(echo "$BRANCH_NAME" | grep -o "T[0-9]\+")
+          echo "task_id=$TASK_ID" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+      
+      - name: Check if PR already exists
+        id: check-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${{ steps.extract-info.outputs.branch_name }}`,
+              state: 'open'
+            });
+            
+            if (prs.length > 0) {
+              core.setOutput('exists', 'true');
+              core.setOutput('pr_number', prs[0].number);
+              core.setOutput('pr_url', prs[0].html_url);
+              console.log(`PR already exists: #${prs[0].number}`);
+            } else {
+              core.setOutput('exists', 'false');
+              console.log('No existing PR found');
+            }
+      
+      - name: Find related issue
+        id: find-issue
+        if: steps.check-pr.outputs.exists == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'task'
+            });
+            
+            const taskId = '${{ steps.extract-info.outputs.task_id }}';
+            const issue = issues.find(issue => 
+              issue.title.includes(taskId + ':')
+            );
+            
+            if (issue) {
+              core.setOutput('issue_number', issue.number);
+              core.setOutput('issue_title', issue.title);
+              core.setOutput('issue_body', issue.body);
+              console.log(`Found related issue: #${issue.number}`);
+              return issue.number;
+            } else {
+              core.setFailed(`No issue found for task ${taskId}. Please ensure the issue exists and has the 'task' label.`);
+            }
+      
+      - name: Analyze changes
+        id: analyze-changes
+        if: steps.check-pr.outputs.exists == 'false'
+        run: |
+          # Get the base branch (develop or main)
+          if git show-ref --verify --quiet refs/remotes/origin/develop; then
+            BASE_BRANCH="develop"
+          else
+            BASE_BRANCH="main"
+          fi
+          echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
+          
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only origin/$BASE_BRANCH...HEAD | head -20)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Count changes by type
+          TEST_FILES=$(echo "$CHANGED_FILES" | grep -E "(test_|tests/|\.test\.|\.spec\.)" | wc -l)
+          BACKEND_FILES=$(echo "$CHANGED_FILES" | grep -E "(backend/|\.py$)" | wc -l)
+          FRONTEND_FILES=$(echo "$CHANGED_FILES" | grep -E "(frontend/|\.ts$|\.js$|\.html$|\.css$)" | wc -l)
+          CONFIG_FILES=$(echo "$CHANGED_FILES" | grep -E "(\.yml$|\.yaml$|\.json$|Dockerfile|docker-compose)" | wc -l)
+          
+          echo "test_files=$TEST_FILES" >> $GITHUB_OUTPUT
+          echo "backend_files=$BACKEND_FILES" >> $GITHUB_OUTPUT
+          echo "frontend_files=$FRONTEND_FILES" >> $GITHUB_OUTPUT
+          echo "config_files=$CONFIG_FILES" >> $GITHUB_OUTPUT
+          echo "total_files=$(echo "$CHANGED_FILES" | wc -l)" >> $GITHUB_OUTPUT
+          
+          # Create a summary of changes
+          CHANGES_SUMMARY=""
+          if [ "$TEST_FILES" -gt 0 ]; then
+            CHANGES_SUMMARY="${CHANGES_SUMMARY}🧪 **Tests**: $TEST_FILES files\n"
+          fi
+          if [ "$BACKEND_FILES" -gt 0 ]; then
+            CHANGES_SUMMARY="${CHANGES_SUMMARY}🔧 **Backend**: $BACKEND_FILES files\n"
+          fi
+          if [ "$FRONTEND_FILES" -gt 0 ]; then
+            CHANGES_SUMMARY="${CHANGES_SUMMARY}🎨 **Frontend**: $FRONTEND_FILES files\n"
+          fi
+          if [ "$CONFIG_FILES" -gt 0 ]; then
+            CHANGES_SUMMARY="${CHANGES_SUMMARY}⚙️ **Config**: $CONFIG_FILES files\n"
+          fi
+          
+          echo "changes_summary<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$CHANGES_SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Create Pull Request
+        id: create-pr
+        if: steps.check-pr.outputs.exists == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const taskId = '${{ steps.extract-info.outputs.task_id }}';
+            const issueTitle = '${{ steps.find-issue.outputs.issue_title }}';
+            const issueNumber = '${{ steps.find-issue.outputs.issue_number }}';
+            const branchName = '${{ steps.extract-info.outputs.branch_name }}';
+            const baseBranch = '${{ steps.analyze-changes.outputs.base_branch }}';
+            const changesSummary = `${{ steps.analyze-changes.outputs.changes_summary }}`;
+            
+            // Generate TDD-specific checklist based on task type
+            function getTDDChecklist(taskId) {
+              const taskNum = parseInt(taskId.replace('T', ''));
+              
+              if (taskNum >= 52 && taskNum <= 60) {
+                return `## 🧪 Contract Test Checklist
+              - [ ] **API contract defined** according to OpenAPI specification
+              - [ ] **Request/response validation** tests implemented
+              - [ ] **Error scenario tests** included (400, 401, 403, 404, 500)
+              - [ ] **Success scenario tests** cover all expected responses
+              - [ ] **Schema validation** enforced for all endpoints`;
+              } else if (taskNum >= 61 && taskNum <= 72) {
+                return `## 🗄️ Model Test Checklist
+              - [ ] **Database model** created with all required fields
+              - [ ] **Validation rules** tested (required fields, constraints)
+              - [ ] **Relationship tests** implemented (foreign keys, joins)
+              - [ ] **Edge cases** covered (null values, duplicates, limits)
+              - [ ] **Database migration** created and tested`;
+              } else if (taskNum >= 73 && taskNum <= 79) {
+                return `## 🏗️ Service Test Checklist
+              - [ ] **Business logic tests** cover all scenarios
+              - [ ] **External dependencies** properly mocked
+              - [ ] **Error handling** tested comprehensively
+              - [ ] **Input validation** and sanitization tested
+              - [ ] **Service integration** with data layer verified`;
+              } else if (taskNum >= 80 && taskNum <= 110) {
+                return `## ⚡ Implementation Checklist
+              - [ ] **Existing tests pass** - all previously written tests still green
+              - [ ] **Minimal implementation** - only enough code to pass tests
+              - [ ] **Code quality** - follows SOLID principles and clean code
+              - [ ] **No over-engineering** - implementation matches test requirements
+              - [ ] **Refactoring complete** - code structure improved while tests stay green`;
+              } else {
+                return `## 📋 General Implementation Checklist
+              - [ ] **Requirements fulfilled** as specified in the task
+              - [ ] **Code follows conventions** established in the project
+              - [ ] **Documentation updated** if required
+              - [ ] **Configuration tested** in appropriate environment`;
+              }
+            }
+            
+            const prBody = `## 🎯 Task Implementation
+            
+            **Implements**: #${issueNumber}
+            **Task ID**: ${taskId}
+            **Branch**: \`${branchName}\`
+            
+            ${getTDDChecklist(taskId)}
+            
+            ## 📊 Changes Summary
+            ${changesSummary || '_No changes summary available_'}
+            
+            ## ✅ TDD Methodology Verification
+            - [ ] **RED Phase**: Tests were written first and failed initially
+            - [ ] **GREEN Phase**: Minimal implementation makes tests pass
+            - [ ] **REFACTOR Phase**: Code quality improved while maintaining green tests
+            - [ ] **All existing tests** still pass after changes
+            - [ ] **Code coverage** maintained or improved
+            
+            ## 🔍 Code Quality Checks
+            - [ ] **Linting passes** (ruff/black for Python, ESLint for TypeScript)
+            - [ ] **Type checking passes** (mypy for Python, tsc for TypeScript)
+            - [ ] **Security scan clean** (no new vulnerabilities introduced)
+            - [ ] **Performance acceptable** (meets <500ms API response requirement)
+            
+            ## 📝 Implementation Details
+            <!-- Describe what was implemented and how -->
+            
+            ## 🧪 Testing
+            <!-- Describe the testing approach and any special test scenarios -->
+            
+            ## 🔍 Review Focus Areas
+            <!-- Highlight any areas that need special attention during review -->
+            
+            ## 📷 Screenshots/Demo
+            <!-- If UI changes, include screenshots or demo links -->
+            
+            ## 🚨 Breaking Changes
+            <!-- List any breaking changes or migration requirements -->
+            
+            ---
+            
+            **Ready for Review**: ⬜ (Check when ready to move from draft)
+            
+            Closes #${issueNumber}
+            
+            ---
+            *Auto-generated PR for ${taskId} | Following TDD methodology*`;
+            
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: issueTitle,
+              head: branchName,
+              base: baseBranch,
+              body: prBody,
+              draft: true
+            });
+            
+            // Add appropriate labels
+            const labels = ['task-implementation', 'needs-review', 'draft'];
+            
+            // Add task-specific labels
+            const taskNum = parseInt(taskId.replace('T', ''));
+            if (taskNum >= 52 && taskNum <= 79) {
+              labels.push('tdd:tests');
+            } else if (taskNum >= 80 && taskNum <= 110) {
+              labels.push('tdd:implementation');
+            }
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: labels
+            });
+            
+            core.setOutput('pr_number', pr.number);
+            core.setOutput('pr_url', pr.html_url);
+            
+            console.log(`Created draft PR #${pr.number}: ${pr.html_url}`);
+            
+            return pr.number;
+      
+      - name: Update issue with PR link
+        if: steps.check-pr.outputs.exists == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = '${{ steps.find-issue.outputs.issue_number }}';
+            const prNumber = '${{ steps.create-pr.outputs.pr_number }}';
+            const prUrl = '${{ steps.create-pr.outputs.pr_url }}';
+            const taskId = '${{ steps.extract-info.outputs.task_id }}';
+            
+            await github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 **Pull Request Created!**
+              
+              **Draft PR**: #${prNumber}
+              **Link**: ${prUrl}
+              
+              ## 📋 Next Steps:
+              1. ✅ **Complete your implementation** following TDD methodology
+              2. ✅ **Update the PR description** with implementation details
+              3. ✅ **Mark PR as ready for review** when all checks pass
+              4. ✅ **Request reviews** from team members
+              
+              ## 🔄 TDD Reminder:
+              - Make sure all tests pass before marking ready for review
+              - Keep commits focused and descriptive
+              - Update documentation if needed
+              
+              **The PR is currently in DRAFT mode** - mark it ready when complete!`
+            });
+            
+            // Add PR link label to issue
+            await github.rest.issues.addLabels({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['has-pr', 'status:in-review']
+            });
+      
+      - name: Comment on existing PR
+        if: steps.check-pr.outputs.exists == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ steps.check-pr.outputs.pr_number }}';
+            const prUrl = '${{ steps.check-pr.outputs.pr_url }}';
+            
+            await github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🔄 **New commits pushed to this PR**
+              
+              Latest commit: \`${{ github.sha }}\`
+              
+              ## 🔍 Auto-checks will run:
+              - Linting and formatting
+              - Unit tests
+              - Integration tests  
+              - Security scanning
+              
+              Review the changes and update the PR description if needed!`
+            });
+            
+            console.log(`Updated existing PR #${prNumber}: ${prUrl}`);
+            
+            core.setOutput('pr_number', prNumber);
+            core.setOutput('pr_url', prUrl);

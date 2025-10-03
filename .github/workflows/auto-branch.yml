@@ -1,0 +1,191 @@
+name: Auto Create Feature Branches
+
+on:
+  issues:
+    types: [assigned]
+
+jobs:
+  create-branch:
+    if: contains(github.event.issue.labels.*.name, 'task')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Extract task ID from issue title
+        id: extract-task
+        run: |
+          TITLE="${{ github.event.issue.title }}"
+          TASK_ID=$(echo "$TITLE" | grep -o "T[0-9]\+" | head -1)
+          
+          # Clean the description for branch name
+          DESCRIPTION=$(echo "$TITLE" | sed "s/T[0-9]\+: //" | sed 's/[^a-zA-Z0-9 ]/-/g' | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+          
+          # Limit branch name length
+          DESCRIPTION=$(echo "$DESCRIPTION" | cut -c1-50 | sed 's/-$//')
+          
+          BRANCH_NAME="feature/$TASK_ID-$DESCRIPTION"
+          
+          echo "task_id=$TASK_ID" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "description=$DESCRIPTION" >> $GITHUB_OUTPUT
+      
+      - name: Check if branch already exists
+        id: check-branch
+        run: |
+          if git show-ref --verify --quiet refs/remotes/origin/${{ steps.extract-task.outputs.branch_name }}; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Branch already exists: ${{ steps.extract-task.outputs.branch_name }}"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Branch does not exist, will create: ${{ steps.extract-task.outputs.branch_name }}"
+          fi
+      
+      - name: Create feature branch
+        if: steps.check-branch.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create branch from develop if it exists, otherwise from main
+          if git show-ref --verify --quiet refs/remotes/origin/develop; then
+            BASE_BRANCH="develop"
+          else
+            BASE_BRANCH="main"
+          fi
+          
+          echo "Creating branch from $BASE_BRANCH"
+          git checkout -b "${{ steps.extract-task.outputs.branch_name }}" origin/$BASE_BRANCH
+          git push origin "${{ steps.extract-task.outputs.branch_name }}"
+          
+          echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
+        id: create-branch
+      
+      - name: Comment on issue with branch info
+        if: steps.check-branch.outputs.exists == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const taskId = '${{ steps.extract-task.outputs.task_id }}';
+            const branchName = '${{ steps.extract-task.outputs.branch_name }}';
+            const baseBranch = '${{ steps.create-branch.outputs.base_branch }}';
+            
+            const comment = `🌟 **Feature branch created automatically!**
+            
+            **Branch**: \`${branchName}\`
+            **Base**: \`${baseBranch}\`
+            
+            ## 🚀 Get started:
+            \`\`\`bash
+            git fetch origin
+            git checkout ${branchName}
+            \`\`\`
+            
+            ## 🔄 TDD Workflow for ${taskId}:
+            
+            ### 1. ✅ RED Phase: Write Failing Tests
+            \`\`\`bash
+            # Write your tests first - they should fail initially
+            # Run tests to confirm they fail
+            pytest backend/tests/  # or npm test for frontend
+            \`\`\`
+            
+            ### 2. ✅ GREEN Phase: Minimal Implementation
+            \`\`\`bash
+            # Write ONLY enough code to make tests pass
+            # Run tests again to confirm they pass
+            \`\`\`
+            
+            ### 3. ✅ REFACTOR Phase: Improve Quality
+            \`\`\`bash
+            # Improve code structure while keeping tests green
+            # Run tests frequently during refactoring
+            \`\`\`
+            
+            ### 4. 📝 When ready to submit:
+            \`\`\`bash
+            git add .
+            git commit -m "${taskId}: Implement [brief description]"
+            git push origin ${branchName}
+            # PR will be created automatically as draft
+            \`\`\`
+            
+            ## 📋 Task-specific reminders:
+            ${getTaskSpecificReminders(taskId)}
+            
+            ## 🎯 Success criteria:
+            - [ ] All tests pass (including existing ones)
+            - [ ] Code coverage maintained/improved
+            - [ ] TDD methodology followed strictly
+            - [ ] Code meets style guidelines
+            
+            **Happy coding! 🚀 Remember: Tests first, implementation second!**`;
+            
+            function getTaskSpecificReminders(taskId) {
+              const taskNum = parseInt(taskId.replace('T', ''));
+              
+              if (taskNum >= 52 && taskNum <= 60) {
+                return '- This is a **contract test** - define API behavior first\\n- Use OpenAPI schema validation\\n- Test both success and error scenarios';
+              } else if (taskNum >= 61 && taskNum <= 72) {
+                return '- This is a **model test** - test database entity behavior\\n- Include validation rules and relationships\\n- Test edge cases and constraints';
+              } else if (taskNum >= 73 && taskNum <= 79) {
+                return '- This is a **service test** - test business logic\\n- Mock external dependencies\\n- Cover all business rules and edge cases';
+              } else if (taskNum >= 80 && taskNum <= 110) {
+                return '- This is an **implementation task**\\n- Tests should already exist from previous tasks\\n- Focus on making existing tests pass';
+              } else if (taskNum <= 51) {
+                return '- This is a **setup/infrastructure task**\\n- Document any manual steps required\\n- Test the setup in isolated environment';
+              } else {
+                return '- Follow the specific requirements in the task description\\n- Maintain consistency with existing code patterns';
+              }
+            }
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      - name: Add status label
+        if: steps.check-branch.outputs.exists == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['status:in-progress', 'branch-created']
+            });
+      
+      - name: Comment if branch exists
+        if: steps.check-branch.outputs.exists == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = '${{ steps.extract-task.outputs.branch_name }}';
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🔄 **Branch already exists**: \`${branchName}\`
+              
+              You can continue working on this branch:
+              \`\`\`bash
+              git fetch origin
+              git checkout ${branchName}
+              \`\`\`
+              
+              If you need a fresh start, you can delete and recreate the branch:
+              \`\`\`bash
+              git push origin --delete ${branchName}
+              \`\`\`
+              Then unassign and reassign yourself to this issue to trigger branch recreation.`
+            });
