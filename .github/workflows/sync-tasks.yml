@@ -1,0 +1,174 @@
+name: Sync Tasks to GitHub Issues
+
+on:
+  push:
+    paths:
+      - 'specs/001-multi-sport-betting/tasks.md'
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      force_sync:
+        description: 'Force sync all tasks (will skip existing check)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  sync-tasks:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          cd .github/scripts
+          npm init -y
+          npm install
+      
+      - name: Setup GitHub CLI
+        uses: cli/gh-extension-preinstall@v1
+        with:
+          gh-version: latest
+      
+      - name: Authenticate GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      
+      - name: Create milestones if they don't exist
+        run: |
+          # Create milestones for the project phases
+          gh api repos/:owner/:repo/milestones --jq '.[].title' > existing_milestones.txt || echo "" > existing_milestones.txt
+          
+          for milestone in "Phase 1: Infrastructure Setup" "Phase 2: Test Development (TDD)" "Phase 3: Core Implementation" "Phase 4: Integration & Features" "Phase 5: Polish & Deployment"; do
+            if ! grep -q "$milestone" existing_milestones.txt; then
+              echo "Creating milestone: $milestone"
+              gh api repos/:owner/:repo/milestones \
+                --method POST \
+                --field title="$milestone" \
+                --field description="Auto-generated milestone for $milestone" \
+                --field state="open" || echo "Failed to create milestone: $milestone"
+            else
+              echo "Milestone already exists: $milestone"
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Sync tasks to issues
+        run: |
+          cd .github/scripts
+          export GITHUB_REPOSITORY="${{ github.repository }}"
+          node sync-tasks-to-issues.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_SYNC: ${{ inputs.force_sync }}
+      
+      - name: Create project if it doesn't exist
+        id: create-project
+        run: |
+          # Check if project exists
+          PROJECT_ID=$(gh api graphql -f query='
+            query($owner: String!, $repo: String!) {
+              repository(owner: $owner, name: $repo) {
+                projectsV2(first: 10) {
+                  nodes {
+                    id
+                    title
+                  }
+                }
+              }
+            }' -f owner="${{ github.repository_owner }}" -f repo="${{ github.event.repository.name }}" --jq '.data.repository.projectsV2.nodes[] | select(.title == "Multi-Sport Betting Platform") | .id' 2>/dev/null || echo "")
+          
+          if [ -z "$PROJECT_ID" ]; then
+            echo "Creating new project board..."
+            PROJECT_ID=$(gh api graphql -f query='
+              mutation($ownerId: ID!) {
+                createProjectV2(input: {ownerId: $ownerId, title: "Multi-Sport Betting Platform"}) {
+                  projectV2 {
+                    id
+                  }
+                }
+              }' -f ownerId="${{ github.repository_id }}" --jq '.data.createProjectV2.projectV2.id')
+            echo "Created project with ID: $PROJECT_ID"
+          else
+            echo "Using existing project with ID: $PROJECT_ID"
+          fi
+          
+          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Add issues to project
+        if: steps.create-project.outputs.project_id != ''
+        run: |
+          # Get all task issues
+          gh issue list --label "task" --limit 1000 --json number,title | jq -r '.[] | .number' | while read issue_number; do
+            if [ -n "$issue_number" ]; then
+              echo "Adding issue #$issue_number to project..."
+              gh api graphql -f query='
+                mutation($projectId: ID!, $issueId: ID!) {
+                  addProjectV2ItemById(input: {projectId: $projectId, contentId: $issueId}) {
+                    item {
+                      id
+                    }
+                  }
+                }' \
+                -f projectId="${{ steps.create-project.outputs.project_id }}" \
+                -f issueId="$(gh api repos/:owner/:repo/issues/$issue_number --jq '.node_id')" 2>/dev/null || echo "Failed to add issue #$issue_number (may already be in project)"
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Summary comment
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Get the tasks count
+            const tasksContent = fs.readFileSync('specs/001-multi-sport-betting/tasks.md', 'utf8');
+            const taskMatches = tasksContent.match(/- \[ \] T\d+/g) || [];
+            const taskCount = taskMatches.length;
+            
+            const comment = `🤖 **GitHub Issues Sync Complete**
+            
+            📋 **Tasks processed**: ${taskCount}
+            📝 **Issues created/updated**: Check the [Issues tab](https://github.com/${context.repo.owner}/${context.repo.repo}/issues?q=is%3Aissue+label%3Atask)
+            📊 **Project board**: [Multi-Sport Betting Platform](https://github.com/${context.repo.owner}/${context.repo.repo}/projects)
+            
+            ## Next Steps:
+            1. 🎯 Assign yourself to issues you want to work on
+            2. 🌿 Feature branches will be created automatically
+            3. 📝 Follow TDD methodology for each task
+            4. 🔄 Create PRs when tasks are complete
+            
+            ## TDD Workflow Reminder:
+            - ✅ **RED**: Write failing tests first
+            - ✅ **GREEN**: Implement minimal code to pass
+            - ✅ **REFACTOR**: Improve code quality
+            
+            *Auto-generated by sync-tasks workflow*`;
+            
+            // Only create comment if this is a push to main/develop
+            if (['main', 'develop'].includes(context.ref.replace('refs/heads/', ''))) {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
+                body: comment
+              });
+            }

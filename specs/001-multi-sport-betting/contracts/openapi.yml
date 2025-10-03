@@ -1,0 +1,862 @@
+openapi: 3.1.0
+info:
+  title: Multi-Sport Betting Platform API
+  description: |
+    Comprehensive API for a multi-sport betting platform supporting user authentication, 
+    group management, sports betting, and real-time rankings.
+  version: 1.0.0
+  contact:
+    name: Betting Platform Team
+    email: api@bettingplatform.com
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://test-api.bettingplatform.com
+    description: Test server
+  - url: https://api.bettingplatform.com
+    description: Production server
+
+security:
+  - OAuth2AuthorizationCode: []
+  - BearerAuth: []
+
+paths:
+  # Authentication endpoints
+  /auth/token:
+    post:
+      tags: [Authentication]
+      summary: Authenticate user and get access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+
+  # User endpoints
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+    put:
+      tags: [Users]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  # Group endpoints
+  /groups:
+    get:
+      tags: [Groups]
+      summary: Get user's groups
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [private, public]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, pending]
+      responses:
+        '200':
+          description: Groups retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
+
+    post:
+      tags: [Groups]
+      summary: Create new group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '201':
+          description: Group created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+
+  /groups/{groupId}:
+    get:
+      tags: [Groups]
+      summary: Get group details
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Group details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupDetails'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags: [Groups]
+      summary: Update group settings
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGroupRequest'
+      responses:
+        '200':
+          description: Group updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+
+  /groups/{groupId}/join:
+    post:
+      tags: [Groups]
+      summary: Join group with invitation code
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinGroupRequest'
+      responses:
+        '200':
+          description: Successfully joined group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMembership'
+
+  /groups/{groupId}/members:
+    get:
+      tags: [Groups]
+      summary: Get group members
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Group members retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GroupMembership'
+
+    post:
+      tags: [Groups]
+      summary: Invite user to group
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteUserRequest'
+      responses:
+        '201':
+          description: User invited successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMembership'
+
+  # Sports and competitions
+  /sports:
+    get:
+      tags: [Sports]
+      summary: Get available sports
+      responses:
+        '200':
+          description: Sports retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Sport'
+
+  /competitions:
+    get:
+      tags: [Competitions]
+      summary: Get available competitions
+      parameters:
+        - name: sport_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Competitions retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Competition'
+
+  /competitions/{competitionId}/seasons:
+    get:
+      tags: [Competitions]
+      summary: Get competition seasons
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Seasons retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Season'
+
+  # Matches and betting
+  /matches:
+    get:
+      tags: [Matches]
+      summary: Get upcoming matches
+      parameters:
+        - name: season_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: group_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Matches retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+
+  /matches/{matchId}:
+    get:
+      tags: [Matches]
+      summary: Get match details
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Match details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchDetails'
+
+  /matches/{matchId}/bet:
+    post:
+      tags: [Betting]
+      summary: Place bet on match
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceBetRequest'
+      responses:
+        '201':
+          description: Bet placed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bet'
+        '400':
+          description: Betting deadline passed or invalid bet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Betting]
+      summary: Get user's bet for match
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: group_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Bet retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bet'
+        '404':
+          description: No bet found
+
+  # Rankings and leaderboards
+  /groups/{groupId}/leaderboard:
+    get:
+      tags: [Rankings]
+      summary: Get group leaderboard
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: season_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Leaderboard retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntry'
+
+components:
+  securitySchemes:
+    OAuth2AuthorizationCode:
+      type: oauth2
+      description: OAuth 2.0 Authorization Code Flow with PKCE for frontend applications
+      flows:
+        authorizationCode:
+          authorizationUrl: http://localhost:8080/realms/betting-platform/protocol/openid-connect/auth
+          tokenUrl: http://localhost:8080/realms/betting-platform/protocol/openid-connect/token
+          refreshUrl: http://localhost:8080/realms/betting-platform/protocol/openid-connect/token
+          scopes:
+            openid: OpenID Connect scope for authentication
+            profile: Access to user profile information
+            email: Access to user email address
+            betting:read: Read access to betting data
+            betting:write: Write access to place bets
+            groups:read: Read access to group information
+            groups:admin: Administrative access to groups
+            admin:matches: Administrative access to match management
+            admin:users: Administrative access to user management
+    
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Bearer token obtained from OAuth 2.0/OIDC flows
+    
+    ClientCredentials:
+      type: oauth2
+      description: OAuth 2.0 Client Credentials Flow for service-to-service authentication
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:8080/realms/betting-platform/protocol/openid-connect/token
+          scopes:
+            service:internal: Internal service access
+            admin:system: System administration access
+
+  schemas:
+    # Authentication schemas
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    RefreshTokenRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          default: bearer
+        expires_in:
+          type: integer
+
+    # User schemas
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+        registration_date:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          minLength: 2
+          maxLength: 50
+
+    # Group schemas
+    Group:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [private, public]
+        member_count:
+          type: integer
+        member_limit:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    GroupDetails:
+      allOf:
+        - $ref: '#/components/schemas/Group'
+        - type: object
+          properties:
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/GroupMembership'
+            user_role:
+              type: string
+              enum: [member, admin, owner]
+
+    CreateGroupRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        type:
+          type: string
+          enum: [private, public]
+        member_limit:
+          type: integer
+          minimum: 2
+          maximum: 1000
+
+    UpdateGroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        member_limit:
+          type: integer
+          minimum: 2
+          maximum: 1000
+
+    JoinGroupRequest:
+      type: object
+      properties:
+        invitation_code:
+          type: string
+
+    InviteUserRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    GroupMembership:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/UserProfile'
+        role:
+          type: string
+          enum: [member, admin, owner]
+        status:
+          type: string
+          enum: [active, pending, removed]
+        joined_at:
+          type: string
+          format: date-time
+
+    # Sports schemas
+    Sport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        display_name:
+          type: string
+        is_active:
+          type: boolean
+
+    Competition:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sport:
+          $ref: '#/components/schemas/Sport'
+        name:
+          type: string
+        type:
+          type: string
+          enum: [tournament, league]
+        format:
+          type: string
+          enum: [knockout, round_robin, mixed]
+        is_active:
+          type: boolean
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+
+    Season:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        competition:
+          $ref: '#/components/schemas/Competition'
+        name:
+          type: string
+        year:
+          type: integer
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        current_matchday:
+          type: integer
+        total_matchdays:
+          type: integer
+        is_active:
+          type: boolean
+
+    # Match and betting schemas
+    Match:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        season:
+          $ref: '#/components/schemas/Season'
+        home_team:
+          $ref: '#/components/schemas/Team'
+        away_team:
+          $ref: '#/components/schemas/Team'
+        matchday:
+          type: integer
+        scheduled_at:
+          type: string
+          format: date-time
+        betting_deadline:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [scheduled, live, finished, cancelled]
+        is_deadline_locked:
+          type: boolean
+
+    MatchDetails:
+      allOf:
+        - $ref: '#/components/schemas/Match'
+        - type: object
+          properties:
+            result:
+              $ref: '#/components/schemas/Result'
+            user_bet:
+              $ref: '#/components/schemas/Bet'
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        short_name:
+          type: string
+        country_code:
+          type: string
+        logo_url:
+          type: string
+
+    Result:
+      type: object
+      properties:
+        home_score:
+          type: integer
+        away_score:
+          type: integer
+        winner:
+          type: string
+          enum: [home, away, draw]
+        is_provisional:
+          type: boolean
+        finalized_at:
+          type: string
+          format: date-time
+
+    PlaceBetRequest:
+      type: object
+      required: [group_id, predicted_winner, predicted_home_score, predicted_away_score]
+      properties:
+        group_id:
+          type: string
+          format: uuid
+        predicted_winner:
+          type: string
+          enum: [home, away, draw]
+        predicted_home_score:
+          type: integer
+          minimum: 0
+        predicted_away_score:
+          type: integer
+          minimum: 0
+
+    Bet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/UserProfile'
+        match:
+          $ref: '#/components/schemas/Match'
+        group_id:
+          type: string
+          format: uuid
+        predicted_winner:
+          type: string
+          enum: [home, away, draw]
+        predicted_home_score:
+          type: integer
+        predicted_away_score:
+          type: integer
+        points_earned:
+          type: integer
+        is_processed:
+          type: boolean
+        placed_at:
+          type: string
+          format: date-time
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        user:
+          $ref: '#/components/schemas/UserProfile'
+        total_points:
+          type: integer
+        total_bets:
+          type: integer
+        correct_winners:
+          type: integer
+        exact_scores:
+          type: integer
+
+    # Error schemas
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object

@@ -1,0 +1,315 @@
+name: Project Board Automation
+
+on:
+  issues:
+    types: [opened, closed, assigned, unassigned]
+  pull_request:
+    types: [opened, closed, ready_for_review, converted_to_draft]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  update-project:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - name: Add new task issues to project
+        if: github.event_name == 'issues' && github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'task')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // This would add the issue to a project board
+            // GitHub's Project API v2 requires specific GraphQL queries
+            console.log(`New task issue created: #${context.issue.number}`);
+            
+            // Add status labels based on issue creation
+            await github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['status:todo']
+            });
+      
+      - name: Update status on assignment
+        if: github.event_name == 'issues' && github.event.action == 'assigned' && contains(github.event.issue.labels.*.name, 'task')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log(`Task assigned: #${context.issue.number} to ${context.payload.assignee.login}`);
+            
+            // Remove todo status and add in-progress
+            await github.rest.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'status:todo'
+            }).catch(() => console.log('Todo label not found'));
+            
+            await github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['status:assigned']
+            });
+            
+            // Comment with assignment acknowledgment
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🎯 **Task assigned to @${context.payload.assignee.login}**
+              
+              ## 🚀 Ready to start? Here's your workflow:
+              
+              1. **Wait for branch creation** (automatic when assigned)
+              2. **Check out your feature branch**
+              3. **Follow TDD methodology** strictly
+              4. **Push changes** to trigger automatic PR creation
+              
+              ## 🔄 TDD Reminders:
+              - ✅ **Write tests first** (they should fail initially)
+              - ✅ **Implement minimal code** to pass tests
+              - ✅ **Refactor** while keeping tests green
+              
+              Good luck! 🚀`
+            });
+      
+      - name: Update status on unassignment
+        if: github.event_name == 'issues' && github.event.action == 'unassigned' && contains(github.event.issue.labels.*.name, 'task')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log(`Task unassigned: #${context.issue.number}`);
+            
+            // Remove in-progress status and add back to todo
+            const labelsToRemove = ['status:assigned', 'status:in-progress', 'branch-created'];
+            
+            for (const label of labelsToRemove) {
+              await github.rest.issues.removeLabel({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: label
+              }).catch(() => console.log(`Label ${label} not found`));
+            }
+            
+            await github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['status:todo']
+            });
+      
+      - name: Update status on PR ready for review
+        if: github.event_name == 'pull_request' && github.event.action == 'ready_for_review'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prTitle = context.payload.pull_request.title;
+            const taskId = prTitle.match(/T\d+/);
+            
+            if (taskId) {
+              console.log(`PR ready for review: #${context.payload.pull_request.number} for task ${taskId[0]}`);
+              
+              // Find the related issue
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'task'
+              });
+              
+              const relatedIssue = issues.find(issue => 
+                issue.title.includes(taskId[0] + ':')
+              );
+              
+              if (relatedIssue) {
+                // Update issue status
+                await github.rest.issues.removeLabel({
+                  issue_number: relatedIssue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'status:in-progress'
+                }).catch(() => console.log('In-progress label not found'));
+                
+                await github.rest.issues.addLabels({
+                  issue_number: relatedIssue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  labels: ['status:review']
+                });
+                
+                // Comment on issue
+                await github.rest.issues.createComment({
+                  issue_number: relatedIssue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `🔍 **Ready for Review!**
+                  
+                  PR #${context.payload.pull_request.number} is now ready for review.
+                  
+                  **Reviewers**: Please check the TDD methodology was followed:
+                  - ✅ Tests were written first
+                  - ✅ Implementation is minimal and focused
+                  - ✅ Code quality is good after refactoring
+                  - ✅ All existing tests still pass
+                  
+                  [Review the PR →](${context.payload.pull_request.html_url})`
+                });
+              }
+            }
+      
+      - name: Update status on PR merge
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prTitle = context.payload.pull_request.title;
+            const taskId = prTitle.match(/T\d+/);
+            
+            if (taskId) {
+              console.log(`PR merged: #${context.payload.pull_request.number} for task ${taskId[0]}`);
+              
+              // Find the related issue
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'task'
+              });
+              
+              const relatedIssue = issues.find(issue => 
+                issue.title.includes(taskId[0] + ':')
+              );
+              
+              if (relatedIssue) {
+                // Close the issue and update labels
+                await github.rest.issues.update({
+                  issue_number: relatedIssue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: 'closed'
+                });
+                
+                await github.rest.issues.addLabels({
+                  issue_number: relatedIssue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  labels: ['status:done', 'completed']
+                });
+                
+                // Celebratory comment
+                await github.rest.issues.createComment({
+                  issue_number: relatedIssue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `🎉 **Task Completed!**
+                  
+                  ✅ PR #${context.payload.pull_request.number} has been merged
+                  ✅ ${taskId[0]} is now complete
+                  ✅ Following TDD methodology
+                  
+                  **Great work!** 🚀 On to the next task!
+                  
+                  **Stats for this task:**
+                  - Branch: \`${context.payload.pull_request.head.ref}\`
+                  - Commits: ${context.payload.pull_request.commits}
+                  - Files changed: ${context.payload.pull_request.changed_files}
+                  - Additions: +${context.payload.pull_request.additions}
+                  - Deletions: -${context.payload.pull_request.deletions}`
+                });
+              }
+            }
+      
+      - name: Update status on PR back to draft
+        if: github.event_name == 'pull_request' && github.event.action == 'converted_to_draft'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prTitle = context.payload.pull_request.title;
+            const taskId = prTitle.match(/T\d+/);
+            
+            if (taskId) {
+              console.log(`PR converted to draft: #${context.payload.pull_request.number} for task ${taskId[0]}`);
+              
+              // Find the related issue
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'task'
+              });
+              
+              const relatedIssue = issues.find(issue => 
+                issue.title.includes(taskId[0] + ':')
+              );
+              
+              if (relatedIssue) {
+                // Update issue status back to in-progress
+                await github.rest.issues.removeLabel({
+                  issue_number: relatedIssue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'status:review'
+                }).catch(() => console.log('Review label not found'));
+                
+                await github.rest.issues.addLabels({
+                  issue_number: relatedIssue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  labels: ['status:in-progress']
+                });
+              }
+            }
+      
+      - name: Handle review feedback
+        if: github.event_name == 'pull_request_review' && github.event.review.state == 'changes_requested'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prTitle = context.payload.pull_request.title;
+            const taskId = prTitle.match(/T\d+/);
+            
+            if (taskId) {
+              console.log(`Changes requested for PR #${context.payload.pull_request.number}`);
+              
+              // Find the related issue
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'task'
+              });
+              
+              const relatedIssue = issues.find(issue => 
+                issue.title.includes(taskId[0] + ':')
+              );
+              
+              if (relatedIssue) {
+                await github.rest.issues.addLabels({
+                  issue_number: relatedIssue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  labels: ['needs-changes']
+                });
+                
+                await github.rest.issues.createComment({
+                  issue_number: relatedIssue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `🔄 **Changes Requested**
+                  
+                  The reviewer has requested changes on PR #${context.payload.pull_request.number}.
+                  
+                  **Review comments**: [View on PR](${context.payload.pull_request.html_url})
+                  
+                  Please address the feedback and push new commits to the feature branch.
+                  
+                  **Remember**: Keep following TDD methodology for any new changes!`
+                });
+              }
+            }
