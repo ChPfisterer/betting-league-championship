@@ -39,9 +39,9 @@ jobs:
           npm install
       
       - name: Setup GitHub CLI
-        uses: cli/gh-extension-preinstall@v1
-        with:
-          gh-version: latest
+        run: |
+          # GitHub CLI is pre-installed on ubuntu-latest
+          gh --version
       
       - name: Authenticate GitHub CLI
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
