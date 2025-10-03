@@ -73,35 +73,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORCE_SYNC: ${{ inputs.force_sync }}
       
-      - name: Create project if it doesn't exist
-        id: create-project
+      - name: Get existing project
+        id: get-project
         run: |
-          # Check if project exists
-          PROJECT_ID=$(gh api graphql -f query='
-            query($owner: String!, $repo: String!) {
-              repository(owner: $owner, name: $repo) {
-                projectsV2(first: 10) {
-                  nodes {
-                    id
-                    title
-                  }
-                }
-              }
-            }' -f owner="${{ github.repository_owner }}" -f repo="${{ github.event.repository.name }}" --jq '.data.repository.projectsV2.nodes[] | select(.title == "Multi-Sport Betting Platform") | .id' 2>/dev/null || echo "")
+          # Use our existing project "Betting League Championship"
+          PROJECT_ID=$(gh project list --owner ChPfisterer --format json | jq -r '.projects[] | select(.title == "Betting League Championship") | .number')
           
           if [ -z "$PROJECT_ID" ]; then
-            echo "Creating new project board..."
-            PROJECT_ID=$(gh api graphql -f query='
-              mutation($ownerId: ID!) {
-                createProjectV2(input: {ownerId: $ownerId, title: "Multi-Sport Betting Platform"}) {
-                  projectV2 {
-                    id
-                  }
-                }
-              }' -f ownerId="${{ github.repository_id }}" --jq '.data.createProjectV2.projectV2.id')
-            echo "Created project with ID: $PROJECT_ID"
+            echo "❌ Project 'Betting League Championship' not found"
+            exit 1
           else
-            echo "Using existing project with ID: $PROJECT_ID"
+            echo "✅ Using existing project: Betting League Championship (ID: $PROJECT_ID)"
           fi
           
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
@@ -109,7 +91,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Add issues to project
-        if: steps.create-project.outputs.project_id != ''
+        if: steps.get-project.outputs.project_id != ''
         run: |
           # Get all task issues
           gh issue list --label "task" --limit 1000 --json number,title | jq -r '.[] | .number' | while read issue_number; do
@@ -123,7 +105,7 @@ jobs:
                     }
                   }
                 }' \
-                -f projectId="${{ steps.create-project.outputs.project_id }}" \
+                -f projectId="${{ steps.get-project.outputs.project_id }}" \
                 -f issueId="$(gh api repos/:owner/:repo/issues/$issue_number --jq '.node_id')" 2>/dev/null || echo "Failed to add issue #$issue_number (may already be in project)"
             fi
           done
