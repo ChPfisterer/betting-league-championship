@@ -1,8 +1,6 @@
 """Base model configuration for SQLAlchemy models."""
 
-from sqlalchemy.ext.declarative import declarative_base
+from src.database import Base
 
-Base = declarative_base()
-
-# This will be imported by all model files
+# Re-export the Base from database module to maintain import consistency
 __all__ = ["Base"]
