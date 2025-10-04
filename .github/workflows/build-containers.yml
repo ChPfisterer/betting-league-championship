@@ -68,7 +68,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Check if backend Docker files exist
+        id: check-backend-docker
+        run: |
+          if [ -f "backend/docker/Dockerfile.dev" ] && [ -f "backend/docker/Dockerfile.prod" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and push backend dev image
+        if: steps.check-backend-docker.outputs.exists == 'true'
         uses: docker/build-push-action@v4
         with:
           context: ./backend
@@ -80,6 +90,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push backend prod image
+        if: steps.check-backend-docker.outputs.exists == 'true'
         uses: docker/build-push-action@v4
         with:
           context: ./backend
@@ -89,6 +100,11 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:prod-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Skip backend (Docker files not ready)
+        if: steps.check-backend-docker.outputs.exists == 'false'
+        run: |
+          echo "Backend Docker files not yet implemented - skipping build"
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -112,7 +128,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Check if frontend Docker files exist
+        id: check-frontend-docker
+        run: |
+          if [ -f "frontend/docker/Dockerfile.dev" ] && [ -f "frontend/docker/Dockerfile.prod" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and push frontend dev image
+        if: steps.check-frontend-docker.outputs.exists == 'true'
         uses: docker/build-push-action@v4
         with:
           context: ./frontend
@@ -124,6 +150,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push frontend prod image
+        if: steps.check-frontend-docker.outputs.exists == 'true'
         uses: docker/build-push-action@v4
         with:
           context: ./frontend
@@ -133,6 +160,11 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:prod-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Skip frontend (Docker files not ready)
+        if: steps.check-frontend-docker.outputs.exists == 'false'
+        run: |
+          echo "Frontend Docker files not yet implemented - skipping build"
 
   build-infrastructure:
     runs-on: ubuntu-latest
