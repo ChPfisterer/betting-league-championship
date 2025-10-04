@@ -178,7 +178,10 @@ jobs:
         uses: bridgecrewio/checkov-action@master
         with:
           directory: .
-          framework: dockerfile,yaml
+          # dockerfile: Scan Dockerfile security
+          # yaml: Scan Docker Compose files (YAML format) and other YAML configs
+          # github_actions: Scan GitHub Actions workflows
+          framework: dockerfile,yaml,github_actions
           output_format: sarif
           output_file_path: checkov-results.sarif
 
