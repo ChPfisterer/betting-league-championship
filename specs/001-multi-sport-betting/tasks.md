@@ -63,15 +63,15 @@
 - [X] T013 [P] Create development environment config in `infrastructure/environments/dev/`
 - [X] T014 [P] Create test environment config in `infrastructure/environments/test/`
 - [X] T015 [P] Create production environment config in `infrastructure/environments/prod/`
-- [ ] T016 Create PostgreSQL initialization scripts in `infrastructure/postgres/`
-- [ ] T017 Create Keycloak realm configurations for all environments in `infrastructure/keycloak/`
+- [X] T016 Create PostgreSQL initialization scripts in `infrastructure/postgres/`
+- [X] T017 Create Keycloak realm configurations for all environments in `infrastructure/keycloak/`
 
 ## Phase 3.4: Backend Project Initialization
 - [X] T018 Initialize Python backend project with FastAPI in `backend/`
 - [X] T019 [P] Setup backend requirements files in `backend/requirements/` (base, dev, test, prod)
 - [X] T020 [P] Configure backend linting and formatting (ruff, black, mypy) in `backend/`
-- [ ] T021 [P] Setup Alembic for database migrations in `backend/alembic/`
-- [ ] T022 Create backend Docker configurations in `backend/docker/`
+- [X] T021 [P] Setup Alembic for database migrations in `backend/alembic/`
+- [X] T022 Create backend Docker configurations in `backend/docker/`
 
 ## Phase 3.5: Frontend Project Initialization
 - [ ] T023 Initialize Angular frontend project in `frontend/`
