@@ -11,17 +11,23 @@ from uuid import UUID
 
 from pydantic import BaseModel, field_validator
 
-from models.group import GroupType, GroupVisibility
+from models.group import PointSystem
 
 
 class GroupBase(BaseModel):
     """Base group schema with common fields."""
     
     name: str
-    description: Optional[str] = None
-    group_type: GroupType
-    visibility: GroupVisibility = GroupVisibility.PUBLIC
-    max_members: Optional[int] = None
+    description: str
+    is_private: bool = False
+    max_members: int = 50
+    allow_member_invites: bool = True
+    auto_approve_members: bool = True
+    point_system: PointSystem = PointSystem.STANDARD
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    rules_text: Optional[str] = None
+    entry_fee: Optional[float] = None
     
     @field_validator('name')
     @classmethod
@@ -37,19 +43,18 @@ class GroupBase(BaseModel):
     @classmethod
     def validate_description(cls, v):
         """Validate group description."""
-        if v is not None:
-            v = v.strip()
-            if len(v) > 500:
-                raise ValueError('Description must not exceed 500 characters')
-            return v if v else None
-        return v
+        if not v or len(v.strip()) < 10:
+            raise ValueError('Group description must be at least 10 characters long')
+        return v.strip()
     
     @field_validator('max_members')
     @classmethod
     def validate_max_members(cls, v):
         """Validate max members limit."""
-        if v is not None and v <= 0:
+        if v <= 0:
             raise ValueError('Max members must be greater than 0')
+        if v > 1000:
+            raise ValueError('Max members cannot exceed 1000')
         return v
 
 
@@ -63,8 +68,15 @@ class GroupUpdate(BaseModel):
     
     name: Optional[str] = None
     description: Optional[str] = None
-    visibility: Optional[GroupVisibility] = None
+    is_private: Optional[bool] = None
     max_members: Optional[int] = None
+    allow_member_invites: Optional[bool] = None
+    auto_approve_members: Optional[bool] = None
+    point_system: Optional[PointSystem] = None
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    rules_text: Optional[str] = None
+    entry_fee: Optional[float] = None
     
     @field_validator('name')
     @classmethod
@@ -83,18 +95,20 @@ class GroupUpdate(BaseModel):
     def validate_description(cls, v):
         """Validate group description."""
         if v is not None:
-            v = v.strip()
-            if len(v) > 500:
-                raise ValueError('Description must not exceed 500 characters')
-            return v if v else None
+            if not v or len(v.strip()) < 10:
+                raise ValueError('Group description must be at least 10 characters long')
+            return v.strip()
         return v
     
     @field_validator('max_members')
     @classmethod
     def validate_max_members(cls, v):
         """Validate max members limit."""
-        if v is not None and v <= 0:
-            raise ValueError('Max members must be greater than 0')
+        if v is not None:
+            if v <= 0:
+                raise ValueError('Max members must be greater than 0')
+            if v > 1000:
+                raise ValueError('Max members cannot exceed 1000')
         return v
 
 
@@ -103,8 +117,10 @@ class GroupResponse(GroupBase):
     
     id: UUID
     creator_id: UUID
+    join_code: Optional[str] = None
+    prize_pool: Optional[float] = None
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime
     member_count: int = 0
     
     class Config:
@@ -117,9 +133,9 @@ class GroupSummary(BaseModel):
     
     id: UUID
     name: str
-    group_type: GroupType
-    visibility: GroupVisibility
+    is_private: bool
     member_count: int = 0
+    point_system: PointSystem
     
     class Config:
         """Pydantic config for ORM mode."""
