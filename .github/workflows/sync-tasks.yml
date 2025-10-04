@@ -1,5 +1,9 @@
 name: Sync Tasks to GitHub Issues
 
+# Global minimal permissions (can be overridden by job-level permissions)
+permissions:
+  contents: read
+
 on:
   push:
     paths:
@@ -7,13 +11,12 @@ on:
     branches:
       - main
       - develop
-  workflow_dispatch:
-    inputs:
-      force_sync:
-        description: 'Force sync all tasks (will skip existing check)'
-        required: false
-        default: false
-        type: boolean
+  schedule:
+    # Run every hour during business hours (UTC)
+    - cron: '0 9-17 * * 1-5'
+
+# Note: Manual execution via workflow_dispatch removed for security compliance
+# Use schedule or push triggers instead
 
 jobs:
   sync-tasks:
