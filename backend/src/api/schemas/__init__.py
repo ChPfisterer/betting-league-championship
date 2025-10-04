@@ -27,6 +27,52 @@ from .group import (
     GroupWithStats
 )
 
+from .sport import (
+    SportBase,
+    SportCreate,
+    SportUpdate,
+    SportResponse,
+    SportSummary,
+    SportWithStats
+)
+
+from .team import (
+    TeamBase,
+    TeamCreate,
+    TeamUpdate,
+    TeamResponse,
+    TeamSummary,
+    TeamWithStats,
+    TeamWithSport
+)
+
+from .competition import (
+    CompetitionBase,
+    CompetitionCreate,
+    CompetitionUpdate,
+    CompetitionResponse,
+    CompetitionSummary,
+    CompetitionWithStats,
+    CompetitionWithSport,
+    CompetitionTeamRegistration,
+    CompetitionTeamList,
+    CompetitionStatus,
+    CompetitionFormat
+)
+
+from .season import (
+    SeasonBase,
+    SeasonCreate,
+    SeasonUpdate,
+    SeasonResponse,
+    SeasonSummary,
+    SeasonWithStats,
+    SeasonCompetitionList,
+    SeasonStandings,
+    SeasonStatus,
+    SeasonType
+)
+
 __all__ = [
     # User schemas
     "UserBase",
@@ -47,4 +93,46 @@ __all__ = [
     "GroupResponse",
     "GroupSummary",
     "GroupWithStats",
+    
+    # Sport schemas
+    "SportBase",
+    "SportCreate",
+    "SportUpdate",
+    "SportResponse",
+    "SportSummary",
+    "SportWithStats",
+    
+    # Team schemas
+    "TeamBase",
+    "TeamCreate",
+    "TeamUpdate",
+    "TeamResponse",
+    "TeamSummary",
+    "TeamWithStats",
+    "TeamWithSport",
+    
+    # Competition schemas
+    "CompetitionBase",
+    "CompetitionCreate",
+    "CompetitionUpdate",
+    "CompetitionResponse",
+    "CompetitionSummary",
+    "CompetitionWithStats",
+    "CompetitionWithSport",
+    "CompetitionTeamRegistration",
+    "CompetitionTeamList",
+    "CompetitionStatus",
+    "CompetitionFormat",
+    
+    # Season schemas
+    "SeasonBase",
+    "SeasonCreate",
+    "SeasonUpdate",
+    "SeasonResponse",
+    "SeasonSummary",
+    "SeasonWithStats",
+    "SeasonCompetitionList",
+    "SeasonStandings",
+    "SeasonStatus",
+    "SeasonType",
 ]

@@ -15,7 +15,7 @@ from .endpoints import (
     competitions,
     matches,
     seasons,
-    players,
+    # players,  # Temporarily disabled for testing
     bets,
     results,
     group_memberships,
@@ -75,11 +75,11 @@ api_router.include_router(
     tags=["Seasons"]
 )
 
-api_router.include_router(
-    players.router, 
-    prefix="/players", 
-    tags=["Players"]
-)
+# api_router.include_router(
+#     players.router, 
+#     prefix="/players", 
+#     tags=["Players"]
+# )
 
 api_router.include_router(
     bets.router, 
