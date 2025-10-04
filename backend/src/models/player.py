@@ -382,6 +382,12 @@ class Player(Base):
         if jersey_number is None:
             raise ValueError("Jersey number is required")
         
+        # Convert to int if string
+        try:
+            jersey_number = int(jersey_number)
+        except (ValueError, TypeError):
+            raise ValueError("Jersey number must be a valid integer")
+        
         if jersey_number <= 0 or jersey_number > 999:
             raise ValueError("Jersey number must be between 1 and 999")
         
@@ -521,6 +527,16 @@ class Player(Base):
         height_m = float(self.height_cm) / 100
         return float(self.weight_kg) / (height_m ** 2)
     
+    @property
+    def display_name_or_full(self) -> str:
+        """Get display name or fall back to full name."""
+        return self.display_name or self.full_name
+    
+    @property
+    def is_under_contract(self) -> bool:
+        """Alias for has_contract property for test compatibility."""
+        return self.has_contract
+    
     # Business logic methods
     def set_injury_status(self, status: str, description: Optional[str] = None) -> None:
         """Update player's injury status."""
@@ -621,14 +637,40 @@ class Player(Base):
             cls.injury_status.in_([InjuryStatus.FIT.value, InjuryStatus.DOUBTFUL.value])
         ).all()
     
+    # Additional business logic methods
+    def can_play_position(self, position: str) -> bool:
+        """Check if player can play a specific position."""
+        # Basic implementation - player can play their primary position
+        return self.position.lower() == position.lower()
+    
+    def is_jersey_available(self, team_id: Union[str, uuid.UUID], jersey_number: int) -> bool:
+        """Check if a jersey number is available for a team."""
+        # Placeholder implementation - would check database for conflicts
+        return jersey_number != self.jersey_number
+    
+    def is_eligible_for_competition(self, competition_id: Union[str, uuid.UUID]) -> bool:
+        """Check if player is eligible for a competition."""
+        # Basic implementation - active players are eligible
+        return self.is_active and self.is_available
+    
+    def can_transfer(self) -> bool:
+        """Check if player can be transferred."""
+        # Basic implementation - active players not under long-term injury can transfer
+        return self.is_active and self.injury_status != InjuryStatus.INJURED.value
+    
+    def is_within_salary_cap(self, team_salary_cap: Decimal) -> bool:
+        """Check if player salary is within team salary cap."""
+        return self.salary <= team_salary_cap
+    
     # Representation
     def __repr__(self) -> str:
         """String representation of Player."""
-        return f"<Player(id={self.id}, name='{self.full_name}', position='{self.position}')>"
+        return f"<Player(id={self.id}, name='{self.full_name}', position='{self.position}', #{self.jersey_number})>"
     
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert Player to dictionary."""
-        return {
+    def to_dict(self, include_sport: bool = False, include_team: bool = False, 
+                include_statistics: bool = False, include_career: bool = False) -> Dict[str, Any]:
+        """Convert Player to dictionary with optional related data."""
+        result = {
             'id': str(self.id),
             'first_name': self.first_name,
             'middle_name': self.middle_name,
@@ -646,6 +688,7 @@ class Player(Base):
             'nationality': self.nationality,
             'height_cm': self.height_cm,
             'weight_kg': float(self.weight_kg) if self.weight_kg else None,
+            'bmi': self.bmi,
             'preferred_foot': self.preferred_foot,
             'market_value': float(self.market_value),
             'salary': float(self.salary),
@@ -668,6 +711,21 @@ class Player(Base):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+        
+        # Add optional related data
+        if include_sport and hasattr(self, 'sport') and self.sport:
+            result['sport'] = self.sport.to_dict() if hasattr(self.sport, 'to_dict') else str(self.sport)
+        
+        if include_team and hasattr(self, 'current_team') and self.current_team:
+            result['current_team'] = self.current_team.to_dict() if hasattr(self.current_team, 'to_dict') else str(self.current_team)
+        
+        if include_statistics and hasattr(self, 'statistics'):
+            result['statistics'] = [stat.to_dict() if hasattr(stat, 'to_dict') else str(stat) for stat in self.statistics]
+        
+        if include_career and hasattr(self, 'career_history'):
+            result['career_history'] = [career.to_dict() if hasattr(career, 'to_dict') else str(career) for career in self.career_history]
+        
+        return result
 
 
 # SQLAlchemy event listeners for automatic timestamp updates
