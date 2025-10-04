@@ -5,12 +5,6 @@
 gunicorn==23.0.0
 uvicorn[standard]==0.32.1
 
-# Production database connection pooling
-psycopg2==2.9.10
-
-# Security enhancements
-cryptography==44.0.0
-
 # Performance monitoring
 opentelemetry-distro==0.48b0
 opentelemetry-instrumentation==0.48b0
