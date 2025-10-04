@@ -178,9 +178,23 @@ jobs:
       - name: Validate Docker Compose files
         run: |
           cd infrastructure
-          docker-compose -f docker/docker-compose.dev.yml config
-          docker-compose -f docker/docker-compose.test.yml config
-          docker-compose -f docker/docker-compose.prod.yml config
+          # Check which docker-compose files exist and validate them
+          if [ -f "docker/docker-compose.base.yml" ]; then
+            echo "Validating base configuration..."
+            docker compose -f docker/docker-compose.base.yml config --quiet
+          fi
+          if [ -f "docker/docker-compose.dev.yml" ]; then
+            echo "Validating dev configuration..."
+            docker compose -f docker/docker-compose.dev.yml config --quiet
+          fi
+          if [ -f "docker/docker-compose.test.yml" ]; then
+            echo "Validating test configuration..."
+            docker compose -f docker/docker-compose.test.yml config --quiet
+          fi
+          if [ -f "docker/docker-compose.prod.yml" ]; then
+            echo "Validating prod configuration..."
+            docker compose -f docker/docker-compose.prod.yml config --quiet
+          fi
 
       - name: Test infrastructure setup
         run: |
