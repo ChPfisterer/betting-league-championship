@@ -5,8 +5,9 @@ This file provides common test fixtures and configuration for all contract tests
 Following TDD methodology - these fixtures support API contract testing.
 """
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from main import app
 
 
@@ -22,10 +23,11 @@ def client(test_app):
     return TestClient(test_app)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_client(test_app):
     """Async test client for API contract tests."""
-    async with AsyncClient(app=test_app, base_url="http://testserver") as client:
+    from httpx import ASGITransport
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://testserver") as client:
         yield client
 
 
