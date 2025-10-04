@@ -23,6 +23,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Import API routers
+from api import api_router
+
 # Create FastAPI application
 app = FastAPI(
     title="Multi-Sport Betting Platform API",
@@ -41,6 +44,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routers
+app.include_router(api_router)
 
 
 # Health check endpoint
