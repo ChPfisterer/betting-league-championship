@@ -1,0 +1,140 @@
+{
+  "realm": "betting-league-dev",
+  "enabled": true,
+  "displayName": "Betting League Championship (Development)",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>Betting League Championship</span></div>",
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "defaultRoles": [
+    "offline_access",
+    "uma_authorization",
+    "default-roles-betting-league-dev"
+  ],
+  "clients": [
+    {
+      "clientId": "betting-backend",
+      "name": "Betting League Backend API",
+      "description": "FastAPI backend service",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "backend-dev-secret",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "300"
+      },
+      "redirectUris": [
+        "http://localhost:8000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8000",
+        "http://localhost:4200"
+      ]
+    },
+    {
+      "clientId": "betting-frontend",
+      "name": "Betting League Frontend",
+      "description": "Angular frontend application",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://localhost:4200/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Regular platform user"
+      },
+      {
+        "name": "group-admin",
+        "description": "Group administrator"
+      },
+      {
+        "name": "platform-admin",
+        "description": "Platform administrator"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@betting-league.dev",
+      "firstName": "Platform",
+      "lastName": "Administrator",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "platform-admin",
+        "user"
+      ]
+    },
+    {
+      "username": "testuser",
+      "email": "test@betting-league.dev",
+      "firstName": "Test",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "test123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    }
+  ],
+  "identityProviders": [],
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "en",
+    "de",
+    "fr"
+  ],
+  "defaultLocale": "en"
+}

@@ -1,0 +1,49 @@
+# Base requirements for the FastAPI backend
+# Latest stable versions as of October 2025
+
+# FastAPI and ASGI
+fastapi==0.115.13
+uvicorn[standard]==0.32.1
+gunicorn==23.0.0
+
+# Database
+sqlalchemy==2.0.36
+alembic==1.14.0
+psycopg2-binary==2.9.10
+asyncpg==0.30.0
+
+# Authentication & Security
+python-keycloak==4.6.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.17
+cryptography==44.0.0
+
+# Data Validation & Serialization
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# HTTP Client
+httpx==0.28.1
+requests==2.32.3
+
+# Utilities
+python-dotenv==1.0.1
+click==8.1.7
+rich==13.9.4
+
+# Observability & Monitoring
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-instrumentation-fastapi==0.48b0
+opentelemetry-instrumentation-sqlalchemy==0.48b0
+opentelemetry-instrumentation-psycopg2==0.48b0
+opentelemetry-exporter-otlp==1.27.0
+structlog==24.4.0
+
+# WebSocket Support
+websockets==13.1
+
+# Date/Time
+python-dateutil==2.9.0.post0
+pytz==2024.2

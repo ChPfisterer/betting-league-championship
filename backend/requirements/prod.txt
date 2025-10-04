@@ -1,0 +1,17 @@
+# Production requirements
+-r base.txt
+
+# Production ASGI server
+gunicorn==23.0.0
+uvicorn[standard]==0.32.1
+
+# Performance monitoring
+opentelemetry-distro==0.48b0
+opentelemetry-instrumentation==0.48b0
+
+# Health checks
+healthcheck==1.3.3
+
+# Logging
+structlog==24.4.0
+python-json-logger==3.2.1

@@ -1,5 +1,9 @@
 name: Auto Create Pull Request
 
+# Global minimal permissions (can be overridden by job-level permissions)
+permissions:
+  contents: read
+
 on:
   push:
     branches:
