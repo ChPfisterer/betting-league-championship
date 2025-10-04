@@ -6,6 +6,7 @@ Following TDD methodology - these fixtures support API contract testing.
 """
 import pytest
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from main import app
 
 
@@ -17,8 +18,15 @@ def test_app():
 
 @pytest.fixture
 def client(test_app):
-    """Test client for API contract tests."""
+    """Sync test client for API contract tests."""
     return TestClient(test_app)
+
+
+@pytest.fixture
+async def async_client(test_app):
+    """Async test client for API contract tests."""
+    async with AsyncClient(app=test_app, base_url="http://testserver") as client:
+        yield client
 
 
 @pytest.fixture
@@ -69,6 +77,13 @@ def authenticated_user(client, sample_user_registration, sample_login_credential
         "token": token_data,
         "headers": {"Authorization": f"Bearer {token_data['access_token']}"}
     }
+
+
+@pytest.fixture
+def auth_headers():
+    """Mock authentication headers for contract tests (TDD phase)."""
+    # During TDD contract phase, we use mock headers since auth endpoints don't exist yet
+    return {"Authorization": "Bearer mock_jwt_token_for_contract_tests"}
 
 
 @pytest.fixture
