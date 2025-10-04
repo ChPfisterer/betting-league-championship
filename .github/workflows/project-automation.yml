@@ -1,5 +1,9 @@
 name: Project Board Automation
 
+# Global minimal permissions (can be overridden by job-level permissions)
+permissions:
+  contents: read
+
 on:
   issues:
     types: [opened, closed, assigned, unassigned]

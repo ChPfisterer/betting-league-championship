@@ -1,0 +1,103 @@
+{
+  "realm": "betting-league-prod",
+  "enabled": true,
+  "displayName": "Betting League Championship",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>Betting League Championship</span></div>",
+  "accessTokenLifespan": 1800,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 3600,
+  "ssoSessionMaxLifespan": 86400,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "rememberMe": true,
+  "verifyEmail": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "passwordPolicy": "length(8) and digits(1) and lowerCase(1) and upperCase(1) and specialChars(1) and notUsername",
+  "defaultRoles": [
+    "offline_access",
+    "uma_authorization",
+    "default-roles-betting-league-prod"
+  ],
+  "clients": [
+    {
+      "clientId": "betting-backend",
+      "name": "Betting League Backend API",
+      "description": "FastAPI backend service",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KEYCLOAK_BACKEND_SECRET}",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "1800"
+      },
+      "redirectUris": [
+        "${BACKEND_URL}/*"
+      ],
+      "webOrigins": [
+        "${BACKEND_URL}",
+        "${FRONTEND_URL}"
+      ]
+    },
+    {
+      "clientId": "betting-frontend",
+      "name": "Betting League Frontend",
+      "description": "Angular frontend application",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "${FRONTEND_URL}/*"
+      ],
+      "webOrigins": [
+        "${FRONTEND_URL}"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Regular platform user"
+      },
+      {
+        "name": "group-admin",
+        "description": "Group administrator"
+      },
+      {
+        "name": "platform-admin",
+        "description": "Platform administrator"
+      }
+    ]
+  },
+  "users": [],
+  "identityProviders": [],
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "en",
+    "de",
+    "fr"
+  ],
+  "defaultLocale": "en"
+}

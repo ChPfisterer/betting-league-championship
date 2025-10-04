@@ -1,0 +1,158 @@
+{
+  "realm": "betting-league-test",
+  "enabled": true,
+  "displayName": "Betting League Championship (Test)",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>Betting League Championship - Test</span></div>",
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": true,
+  "rememberMe": true,
+  "verifyEmail": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "defaultRoles": [
+    "offline_access",
+    "uma_authorization",
+    "default-roles-betting-league-test"
+  ],
+  "clients": [
+    {
+      "clientId": "betting-backend",
+      "name": "Betting League Backend API",
+      "description": "FastAPI backend service for testing",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "backend-test-secret",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "300"
+      },
+      "redirectUris": [
+        "http://test-backend:8000/*"
+      ],
+      "webOrigins": [
+        "http://test-backend:8000",
+        "http://test-frontend:4200"
+      ]
+    },
+    {
+      "clientId": "betting-frontend",
+      "name": "Betting League Frontend",
+      "description": "Angular frontend application for testing",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://test-frontend:4200/*"
+      ],
+      "webOrigins": [
+        "http://test-frontend:4200"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Regular platform user"
+      },
+      {
+        "name": "group-admin",
+        "description": "Group administrator"
+      },
+      {
+        "name": "platform-admin",
+        "description": "Platform administrator"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "testadmin",
+      "email": "admin@betting-league.test",
+      "firstName": "Test",
+      "lastName": "Administrator",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testadmin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "platform-admin",
+        "user"
+      ]
+    },
+    {
+      "username": "testuser1",
+      "email": "user1@betting-league.test",
+      "firstName": "Test",
+      "lastName": "User One",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testuser123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    },
+    {
+      "username": "testuser2",
+      "email": "user2@betting-league.test",
+      "firstName": "Test",
+      "lastName": "User Two",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testuser123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ]
+    }
+  ],
+  "identityProviders": [],
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "en",
+    "de",
+    "fr"
+  ],
+  "defaultLocale": "en"
+}

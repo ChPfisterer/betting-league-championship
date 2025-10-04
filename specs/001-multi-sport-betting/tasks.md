@@ -44,34 +44,34 @@
 - **Documentation**: `specs/001-multi-sport-betting/`
 
 ## Phase 3.1: Project Setup & GitHub Management
-- [ ] T001 Create GitHub project with kanban board for issue tracking in repository
-- [ ] T002 [P] Create GitHub issue templates in `.github/ISSUE_TEMPLATE/` (bug, feature, enhancement)
-- [ ] T003 [P] Create pull request template in `.github/PULL_REQUEST_TEMPLATE.md` with issue linking
+- [X] T001 Create GitHub project with kanban board for issue tracking in repository
+- [X] T002 [P] Create GitHub issue templates in `.github/ISSUE_TEMPLATE/` (bug, feature, enhancement)
+- [X] T003 [P] Create pull request template in `.github/PULL_REQUEST_TEMPLATE.md` with issue linking
 - [ ] T004 [P] Setup GitHub branch protection rules for main and develop branches
-- [ ] T005 Create project structure directories: `backend/`, `frontend/`, `infrastructure/`
+- [X] T005 Create project structure directories: `backend/`, `frontend/`, `infrastructure/`
 
 ## Phase 3.2: CI/CD Pipeline Setup
-- [ ] T006 [P] Create GitHub Actions workflow `ci-development.yml` for feature branch testing
-- [ ] T007 [P] Create GitHub Actions workflow `ci-test.yml` for test environment deployment
-- [ ] T008 [P] Create GitHub Actions workflow `ci-production.yml` for production deployment
-- [ ] T009 [P] Create GitHub Actions workflow `build-containers.yml` for container builds
-- [ ] T010 [P] Create GitHub Actions workflow `security-scan.yml` for vulnerability scanning
+- [X] T006 [P] Create GitHub Actions workflow `ci-development.yml` for feature branch testing
+- [X] T007 [P] Create GitHub Actions workflow `ci-test.yml` for test environment deployment
+- [X] T008 [P] Create GitHub Actions workflow `ci-production.yml` for production deployment
+- [X] T009 [P] Create GitHub Actions workflow `build-containers.yml` for container builds
+- [X] T010 [P] Create GitHub Actions workflow `security-scan.yml` for vulnerability scanning
 - [ ] T011 Setup GitHub Container Registry (GHCR) integration for image management
 
 ## Phase 3.3: Infrastructure Foundation
-- [ ] T012 Create base Docker Compose configuration in `infrastructure/docker/docker-compose.base.yml`
-- [ ] T013 [P] Create development environment config in `infrastructure/environments/dev/`
-- [ ] T014 [P] Create test environment config in `infrastructure/environments/test/`
-- [ ] T015 [P] Create production environment config in `infrastructure/environments/prod/`
-- [ ] T016 Create PostgreSQL initialization scripts in `infrastructure/postgres/`
-- [ ] T017 Create Keycloak realm configurations for all environments in `infrastructure/keycloak/`
+- [X] T012 Create base Docker Compose configuration in `infrastructure/docker/docker-compose.base.yml`
+- [X] T013 [P] Create development environment config in `infrastructure/environments/dev/`
+- [X] T014 [P] Create test environment config in `infrastructure/environments/test/`
+- [X] T015 [P] Create production environment config in `infrastructure/environments/prod/`
+- [X] T016 Create PostgreSQL initialization scripts in `infrastructure/postgres/`
+- [X] T017 Create Keycloak realm configurations for all environments in `infrastructure/keycloak/`
 
 ## Phase 3.4: Backend Project Initialization
-- [ ] T018 Initialize Python backend project with FastAPI in `backend/`
-- [ ] T019 [P] Setup backend requirements files in `backend/requirements/` (base, dev, test, prod)
-- [ ] T020 [P] Configure backend linting and formatting (ruff, black, mypy) in `backend/`
-- [ ] T021 [P] Setup Alembic for database migrations in `backend/alembic/`
-- [ ] T022 Create backend Docker configurations in `backend/docker/`
+- [X] T018 Initialize Python backend project with FastAPI in `backend/`
+- [X] T019 [P] Setup backend requirements files in `backend/requirements/` (base, dev, test, prod)
+- [X] T020 [P] Configure backend linting and formatting (ruff, black, mypy) in `backend/`
+- [X] T021 [P] Setup Alembic for database migrations in `backend/alembic/`
+- [X] T022 Create backend Docker configurations in `backend/docker/`
 
 ## Phase 3.5: Frontend Project Initialization
 - [ ] T023 Initialize Angular frontend project in `frontend/`
