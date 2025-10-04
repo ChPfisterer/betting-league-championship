@@ -8,6 +8,7 @@ line-length = 88
 # Source code directories
 src = ["src", "tests"]
 
+[tool.ruff.lint]
 # Enable specific rules
 select = [
     "E",    # pycodestyle errors
@@ -67,14 +68,14 @@ exclude = [
     "alembic/versions",
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S", "ARG", "PLR2004"]  # Security, unused args, magic values
 "src/models/*" = ["RUF012"]          # SQLAlchemy models use class attributes
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 10
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["src"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 

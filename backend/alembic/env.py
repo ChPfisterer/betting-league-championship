@@ -1,14 +1,13 @@
 import os
 import sys
 from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from pathlib import Path
 
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # Add the src directory to Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -24,22 +23,19 @@ if config.config_file_name is not None:
 # Import models for autogenerate support
 try:
     from models.base import Base
+
     target_metadata = Base.metadata
 except ImportError:
     # Models not yet created, set to None for now
     target_metadata = None
 
+
 # Support for environment variable database URL override
-def get_url():
+def get_url() -> str:
     url = os.getenv("DATABASE_URL")
     if url:
         return url
     return config.get_main_option("sqlalchemy.url")
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
 
 def run_migrations_offline() -> None:
@@ -76,7 +72,7 @@ def run_migrations_online() -> None:
     # Override the sqlalchemy.url from config with our custom function
     configuration = config.get_section(config.config_ini_section, {})
     configuration["sqlalchemy.url"] = get_url()
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -84,9 +80,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
