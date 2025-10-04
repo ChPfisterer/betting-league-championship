@@ -99,17 +99,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check if Docker files exist
+        id: check-docker
+        run: |
+          BACKEND_EXISTS=false
+          FRONTEND_EXISTS=false
+          
+          if [ -f "backend/docker/Dockerfile.prod" ]; then
+            BACKEND_EXISTS=true
+          fi
+          
+          if [ -f "frontend/docker/Dockerfile.prod" ]; then
+            FRONTEND_EXISTS=true
+          fi
+          
+          echo "backend_exists=$BACKEND_EXISTS" >> $GITHUB_OUTPUT
+          echo "frontend_exists=$FRONTEND_EXISTS" >> $GITHUB_OUTPUT
+
       - name: Build backend image for scanning
+        if: steps.check-docker.outputs.backend_exists == 'true'
         run: |
           cd backend
           docker build -f docker/Dockerfile.prod -t backend-scan .
 
       - name: Build frontend image for scanning
+        if: steps.check-docker.outputs.frontend_exists == 'true'
         run: |
           cd frontend
           docker build -f docker/Dockerfile.prod -t frontend-scan .
 
       - name: Run Trivy vulnerability scanner (Backend)
+        if: steps.check-docker.outputs.backend_exists == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'backend-scan'
@@ -117,6 +137,7 @@ jobs:
           output: 'backend-trivy-results.sarif'
 
       - name: Run Trivy vulnerability scanner (Frontend)
+        if: steps.check-docker.outputs.frontend_exists == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'frontend-scan'
@@ -125,7 +146,7 @@ jobs:
 
       - name: Upload Trivy scan results (Backend)
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && steps.check-docker.outputs.backend_exists == 'true'
         continue-on-error: true
         with:
           sarif_file: 'backend-trivy-results.sarif'
@@ -133,11 +154,16 @@ jobs:
 
       - name: Upload Trivy scan results (Frontend)
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && steps.check-docker.outputs.frontend_exists == 'true'
         continue-on-error: true
         with:
           sarif_file: 'frontend-trivy-results.sarif'
           category: 'frontend-container'
+
+      - name: Skip container scanning (Docker files not ready)
+        if: steps.check-docker.outputs.backend_exists == 'false' && steps.check-docker.outputs.frontend_exists == 'false'
+        run: |
+          echo "Docker files not yet implemented - skipping container scanning"
 
   infrastructure-scan:
     runs-on: ubuntu-latest
