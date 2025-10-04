@@ -21,7 +21,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   detect-changes:
@@ -68,6 +67,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Generate image name
+        id: image-name
+        run: |
+          # Convert repository name to lowercase for Docker registry compatibility
+          echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Check if backend Docker files exist
         id: check-backend-docker
         run: |
@@ -85,7 +90,7 @@ jobs:
           file: ./backend/docker/Dockerfile.dev
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:dev-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.image-name.outputs.name }}/backend:dev-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -97,7 +102,7 @@ jobs:
           file: ./backend/docker/Dockerfile.prod
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:prod-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.image-name.outputs.name }}/backend:prod-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -128,6 +133,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Generate image name
+        id: image-name
+        run: |
+          # Convert repository name to lowercase for Docker registry compatibility
+          echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Check if frontend Docker files exist
         id: check-frontend-docker
         run: |
@@ -145,7 +156,7 @@ jobs:
           file: ./frontend/docker/Dockerfile.dev
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:dev-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.image-name.outputs.name }}/frontend:dev-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -157,7 +168,7 @@ jobs:
           file: ./frontend/docker/Dockerfile.prod
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:prod-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.image-name.outputs.name }}/frontend:prod-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
