@@ -299,6 +299,44 @@ groups (
 - **Foreign Key Indexes** for relationship queries
 - **JSON Indexes** for flexible data storage
 
+### Field Architecture (817 Total Fields)
+
+#### Distribution Summary
+| Layer | Fields | % | Description |
+|-------|--------|---|-------------|
+| Database | 295 | 36% | Core persistence fields |
+| API Schema | 502 | 61% | Validation + computed fields |
+| Seed Data | 20 | 3% | Test data fields |
+
+#### Key Consistency Metrics
+- **DB + API Overlap**: 205 fields (25.1%) - Clean separation of concerns
+- **API Validation Layer**: 297 API-only fields for business logic
+- **Internal DB Fields**: 90 database-only fields for optimization
+
+### Enum System (23 Core Enums)
+
+#### Critical Business Enums
+```python
+# User Management
+UserStatus: pending | active | suspended | banned | deactivated
+UserRole: user | moderator | admin | super_admin  
+KYCStatus: not_started | in_progress | pending_review | verified | rejected
+
+# Betting Core
+BetStatus: pending | matched | settled | cancelled | void | won | lost
+BetType: single | multiple | accumulator | system | each_way
+MarketType: match_winner | over_under | handicap | both_teams_score
+
+# Competition
+MatchStatus: scheduled | live | halftime | finished | postponed | cancelled
+CompetitionType: league | cup | tournament | playoff | friendly
+```
+
+#### Validation System
+✅ **100% Enum Compliance** in seed data  
+✅ **Type-safe validation** with detailed error messages  
+✅ **Centralized enum definitions** across all layers  
+
 ---
 
 ## 🔐 Security
