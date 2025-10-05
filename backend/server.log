@@ -11,3 +11,9 @@ INFO:     connection rejected (403 Forbidden)
 INFO:     connection closed
 INFO:     192.168.178.157:58767 - "GET /loginMsg.js HTTP/1.1" 404 Not Found
 INFO:     192.168.178.157:58768 - "GET /cgi/get.cgi?cmd=home_login HTTP/1.1" 404 Not Found
+INFO:     192.168.178.157:54337 - "GET / HTTP/1.1" 200 OK
+INFO:     ('192.168.178.157', 54398) - "WebSocket /" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     192.168.178.157:54401 - "GET /loginMsg.js HTTP/1.1" 404 Not Found
+INFO:     192.168.178.157:54402 - "GET /cgi/get.cgi?cmd=home_login HTTP/1.1" 404 Not Found

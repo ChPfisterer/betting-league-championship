@@ -17,6 +17,7 @@ from .match import Match
 from .player import Player
 from .bet import Bet
 from .result import Result
+from .audit_log import AuditLog
 
 __all__ = [
     'Base',
@@ -31,4 +32,5 @@ __all__ = [
     'Player',
     'Bet',
     'Result',
+    'AuditLog',
 ]
