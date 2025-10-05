@@ -602,6 +602,14 @@ class User(Base):
         
         return result
     
+    # Relationships
+    audit_logs = relationship(
+        "AuditLog",
+        back_populates="user",
+        lazy="dynamic",
+        cascade="all, delete-orphan"
+    )
+    
     def __repr__(self) -> str:
         """String representation of user."""
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"
