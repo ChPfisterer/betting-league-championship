@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "betting-league-championship-api",
 		"name": "Betting League Championship API",
-		"description": "Complete API collection for the Betting League Championship platform with 186 endpoints across 12 core modules.\n\n**Features:**\n- Multi-sport betting platform\n- Social features with groups\n- Real-time match updates\n- Enterprise security with JWT\n- Comprehensive audit logging\n\n**Base URL:** {{base_url}}/api/v1\n\n**Authentication:** Bearer JWT token\n\n**Version:** 1.0\n**Last Updated:** October 5, 2025",
+		"description": "Complete API collection for the Betting League Championship platform with 186 endpoints across 12 core modules.\n\n**Features:**\n- Multi-sport betting platform\n- Social features with groups\n- Real-time match updates\n- Enterprise security with JWT\n- Comprehensive audit logging\n- Enhanced enum validation system\n- Field architecture with 817 total fields\n\n**Base URL:** {{base_url}}/api/v1\n\n**Authentication:** Bearer JWT token\n\n**Version:** 1.0\n**Last Updated:** October 5, 2025\n**Environment:** Updated with latest enum fixes and field architecture",
 		"version": "1.0.0",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
