@@ -1,0 +1,1438 @@
+{
+	"info": {
+		"_postman_id": "betting-league-championship-api",
+		"name": "Betting League Championship API",
+		"description": "Complete API collection for the Betting League Championship platform with 186 endpoints across 12 core modules.\n\n**Features:**\n- Multi-sport betting platform\n- Social features with groups\n- Real-time match updates\n- Enterprise security with JWT\n- Comprehensive audit logging\n\n**Base URL:** {{base_url}}/api/v1\n\n**Authentication:** Bearer JWT token\n\n**Version:** 1.0\n**Last Updated:** October 5, 2025",
+		"version": "1.0.0",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"description": "User authentication and authorization endpoints",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"johndoe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"date_of_birth\": \"1990-01-15T00:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('access_token', response.access_token);",
+									"    pm.environment.set('refresh_token', response.refresh_token);",
+									"    console.log('Tokens saved to environment');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"john@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "me"]
+						}
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "refresh"]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👤 Users",
+			"description": "User management and profile endpoints",
+			"item": [
+				{
+					"name": "List Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/?skip=0&limit=10&status=active",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", ""],
+							"query": [
+								{"key": "skip", "value": "0"},
+								{"key": "limit", "value": "10"},
+								{"key": "status", "value": "active"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"first_name\": \"New\",\n  \"last_name\": \"User\",\n  \"date_of_birth\": \"1995-05-10T00:00:00Z\",\n  \"role\": \"user\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", ""]
+						}
+					}
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"Updated\",\n  \"last_name\": \"Name\",\n  \"email\": \"updated@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get User Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Update User Preferences",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notifications_enabled\": true,\n  \"email_notifications\": false,\n  \"preferred_odds_format\": \"decimal\",\n  \"timezone\": \"UTC\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}/preferences",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "{{user_id}}", "preferences"]
+						}
+					}
+				},
+				{
+					"name": "Search Users",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"john\",\n  \"filters\": {\n    \"status\": \"active\",\n    \"role\": \"user\"\n  },\n  \"skip\": 0,\n  \"limit\": 20\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/search",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", "search"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👥 Groups",
+			"description": "Group management and social features",
+			"item": [
+				{
+					"name": "List Groups",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/groups/?skip=0&limit=10&privacy=public",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "groups", ""],
+							"query": [
+								{"key": "skip", "value": "0"},
+								{"key": "limit", "value": "10"},
+								{"key": "privacy", "value": "public"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Group",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('group_id', response.id);",
+									"    console.log('Group ID saved:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Champions League Bettors\",\n  \"description\": \"Group for betting on Champions League matches\",\n  \"privacy\": \"public\",\n  \"max_members\": 50\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/groups/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "groups", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Group Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/groups/{{group_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "groups", "{{group_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Group",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Group Name\",\n  \"description\": \"Updated description\",\n  \"max_members\": 100\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/groups/{{group_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "groups", "{{group_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Group Members",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/groups/{{group_id}}/members",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "groups", "{{group_id}}", "members"]
+						}
+					}
+				},
+				{
+					"name": "Invite Member to Group",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"friend@example.com\",\n  \"role\": \"member\",\n  \"message\": \"Join our betting group!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/groups/{{group_id}}/invite",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "groups", "{{group_id}}", "invite"]
+						}
+					}
+				},
+				{
+					"name": "Get Group Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/groups/{{group_id}}/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "groups", "{{group_id}}", "statistics"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "⚽ Sports",
+			"description": "Sports and categories management",
+			"item": [
+				{
+					"name": "List Sports",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/sports/?active=true",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sports", ""],
+							"query": [
+								{"key": "active", "value": "true"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Sport",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('sport_id', response.id);",
+									"    console.log('Sport ID saved:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Football\",\n  \"description\": \"Association Football (Soccer)\",\n  \"category\": \"team_sport\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/sports/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sports", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Sport Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/sports/{{sport_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sports", "{{sport_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Sport",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Football (Soccer)\",\n  \"description\": \"Updated description for football\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/sports/{{sport_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sports", "{{sport_id}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏆 Teams",
+			"description": "Team management and roster",
+			"item": [
+				{
+					"name": "List Teams",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/teams/?sport_id={{sport_id}}&skip=0&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "teams", ""],
+							"query": [
+								{"key": "sport_id", "value": "{{sport_id}}"},
+								{"key": "skip", "value": "0"},
+								{"key": "limit", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Team",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('team_id', response.id);",
+									"    console.log('Team ID saved:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Manchester United\",\n  \"short_name\": \"MAN UTD\",\n  \"sport_id\": \"{{sport_id}}\",\n  \"country\": \"England\",\n  \"city\": \"Manchester\",\n  \"founded_year\": 1878,\n  \"logo_url\": \"https://example.com/logos/man-utd.png\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/teams/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "teams", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Team Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/teams/{{team_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "teams", "{{team_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Team Players",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/teams/{{team_id}}/players",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "teams", "{{team_id}}", "players"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏅 Competitions",
+			"description": "Competition and tournament management",
+			"item": [
+				{
+					"name": "List Competitions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/competitions/?sport_id={{sport_id}}&status=active",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "competitions", ""],
+							"query": [
+								{"key": "sport_id", "value": "{{sport_id}}"},
+								{"key": "status", "value": "active"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Competition",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('competition_id', response.id);",
+									"    console.log('Competition ID saved:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Premier League\",\n  \"sport_id\": \"{{sport_id}}\",\n  \"type\": \"league\",\n  \"country\": \"England\",\n  \"start_date\": \"2025-08-15T00:00:00Z\",\n  \"end_date\": \"2026-05-25T00:00:00Z\",\n  \"status\": \"upcoming\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/competitions/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "competitions", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Competition Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/competitions/{{competition_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "competitions", "{{competition_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Competition Matches",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/competitions/{{competition_id}}/matches",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "competitions", "{{competition_id}}", "matches"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "⚽ Matches",
+			"description": "Match scheduling and management",
+			"item": [
+				{
+					"name": "List Matches",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/matches/?status=upcoming&date_from=2025-10-05&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "matches", ""],
+							"query": [
+								{"key": "status", "value": "upcoming"},
+								{"key": "date_from", "value": "2025-10-05"},
+								{"key": "limit", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Match",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('match_id', response.id);",
+									"    console.log('Match ID saved:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"home_team_id\": \"{{team_id}}\",\n  \"away_team_id\": \"{{team_id}}\",\n  \"competition_id\": \"{{competition_id}}\",\n  \"scheduled_time\": \"2025-10-15T15:00:00Z\",\n  \"venue\": \"Old Trafford\",\n  \"status\": \"scheduled\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/matches/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "matches", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Match Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/matches/{{match_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "matches", "{{match_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Match Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"live\",\n  \"started_at\": \"2025-10-15T15:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/matches/{{match_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "matches", "{{match_id}}", "status"]
+						}
+					}
+				},
+				{
+					"name": "Get Live Matches",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/matches/live",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "matches", "live"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🎰 Bets",
+			"description": "Betting operations and management",
+			"item": [
+				{
+					"name": "List Bets",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/bets/?status=pending&skip=0&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "bets", ""],
+							"query": [
+								{"key": "status", "value": "pending"},
+								{"key": "skip", "value": "0"},
+								{"key": "limit", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Place Bet",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('bet_id', response.id);",
+									"    console.log('Bet ID saved:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"match_id\": \"{{match_id}}\",\n  \"bet_type\": \"match_winner\",\n  \"selection\": \"home_team\",\n  \"stake\": 25.00,\n  \"odds\": 2.50\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/bets/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "bets", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Bet Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/bets/{{bet_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "bets", "{{bet_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Cancel Bet",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/bets/{{bet_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "bets", "{{bet_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Settle Bet",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"result\": \"won\",\n  \"payout\": 62.50\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/bets/{{bet_id}}/settle",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "bets", "{{bet_id}}", "settle"]
+						}
+					}
+				},
+				{
+					"name": "Get User Bets",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/bets/user/{{user_id}}?status=all&limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "bets", "user", "{{user_id}}"],
+							"query": [
+								{"key": "status", "value": "all"},
+								{"key": "limit", "value": "50"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Betting Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/bets/statistics?period=monthly&user_id={{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "bets", "statistics"],
+							"query": [
+								{"key": "period", "value": "monthly"},
+								{"key": "user_id", "value": "{{user_id}}"}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📊 Results",
+			"description": "Match results and outcome management",
+			"item": [
+				{
+					"name": "List Results",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/results/?date_from=2025-10-01&verified=true&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "results", ""],
+							"query": [
+								{"key": "date_from", "value": "2025-10-01"},
+								{"key": "verified", "value": "true"},
+								{"key": "limit", "value": "20"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Record Result",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('result_id', response.id);",
+									"    console.log('Result ID saved:', response.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"match_id\": \"{{match_id}}\",\n  \"home_score\": 2,\n  \"away_score\": 1,\n  \"winner\": \"home_team\",\n  \"status\": \"final\",\n  \"recorded_at\": \"2025-10-15T17:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/results/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "results", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Result Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/results/{{result_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "results", "{{result_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Verify Result",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"verified\": true,\n  \"verified_by\": \"admin\",\n  \"verification_notes\": \"Official result confirmed\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/results/{{result_id}}/verify",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "results", "{{result_id}}", "verify"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📋 Audit Logs",
+			"description": "System audit and security logging",
+			"item": [
+				{
+					"name": "List Audit Logs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/audit-logs/?action=user_login&date_from=2025-10-01&limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "audit-logs", ""],
+							"query": [
+								{"key": "action", "value": "user_login"},
+								{"key": "date_from", "value": "2025-10-01"},
+								{"key": "limit", "value": "50"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Audit Log",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"custom_action\",\n  \"resource_type\": \"user\",\n  \"resource_id\": \"{{user_id}}\",\n  \"details\": {\n    \"custom_field\": \"custom_value\",\n    \"description\": \"Custom audit log entry\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/audit-logs/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "audit-logs", ""]
+						}
+					}
+				},
+				{
+					"name": "Get Audit Log Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/audit-logs/{{audit_log_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "audit-logs", "{{audit_log_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Search Audit Logs",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"filters\": {\n    \"user_id\": \"{{user_id}}\",\n    \"action_type\": \"betting\",\n    \"date_from\": \"2025-10-01T00:00:00Z\",\n    \"date_to\": \"2025-10-31T23:59:59Z\"\n  },\n  \"skip\": 0,\n  \"limit\": 100\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/audit-logs/search",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "audit-logs", "search"]
+						}
+					}
+				},
+				{
+					"name": "Get Security Analytics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/audit-logs/analytics/security?period=weekly",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "audit-logs", "analytics", "security"],
+							"query": [
+								{"key": "period", "value": "weekly"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Export Audit Logs",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"format\": \"csv\",\n  \"filters\": {\n    \"date_from\": \"2025-10-01T00:00:00Z\",\n    \"date_to\": \"2025-10-31T23:59:59Z\"\n  },\n  \"include_details\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/audit-logs/export",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "audit-logs", "export"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-refresh token if expired",
+					"const accessToken = pm.environment.get('access_token');",
+					"const refreshToken = pm.environment.get('refresh_token');",
+					"",
+					"if (accessToken && refreshToken) {",
+					"    // Check if token is expired (simplified check)",
+					"    try {",
+					"        const payload = JSON.parse(atob(accessToken.split('.')[1]));",
+					"        const now = Math.floor(Date.now() / 1000);",
+					"        ",
+					"        if (payload.exp && payload.exp < now) {",
+					"            console.log('Token expired, attempting refresh...');",
+					"            ",
+					"            pm.sendRequest({",
+					"                url: pm.environment.get('base_url') + '/api/v1/auth/refresh',",
+					"                method: 'POST',",
+					"                header: {",
+					"                    'Content-Type': 'application/json'",
+					"                },",
+					"                body: {",
+					"                    mode: 'raw',",
+					"                    raw: JSON.stringify({",
+					"                        refresh_token: refreshToken",
+					"                    })",
+					"                }",
+					"            }, (err, response) => {",
+					"                if (!err && response.code === 200) {",
+					"                    const data = response.json();",
+					"                    pm.environment.set('access_token', data.access_token);",
+					"                    console.log('Token refreshed successfully');",
+					"                } else {",
+					"                    console.log('Token refresh failed');",
+					"                }",
+					"            });",
+					"        }",
+					"    } catch (e) {",
+					"        console.log('Error parsing token:', e);",
+					"    }",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"description": "Base URL for the API (development)"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"description": "JWT access token for authentication"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"description": "JWT refresh token for token renewal"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"description": "Current user ID for testing"
+		},
+		{
+			"key": "group_id",
+			"value": "",
+			"description": "Test group ID"
+		},
+		{
+			"key": "sport_id",
+			"value": "",
+			"description": "Test sport ID"
+		},
+		{
+			"key": "team_id",
+			"value": "",
+			"description": "Test team ID"
+		},
+		{
+			"key": "competition_id",
+			"value": "",
+			"description": "Test competition ID"
+		},
+		{
+			"key": "match_id",
+			"value": "",
+			"description": "Test match ID"
+		},
+		{
+			"key": "bet_id",
+			"value": "",
+			"description": "Test bet ID"
+		},
+		{
+			"key": "result_id",
+			"value": "",
+			"description": "Test result ID"
+		},
+		{
+			"key": "audit_log_id",
+			"value": "",
+			"description": "Test audit log ID"
+		}
+	]
+}
