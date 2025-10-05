@@ -2,8 +2,8 @@
 	"info": {
 		"_postman_id": "betting-league-championship-api",
 		"name": "Betting League Championship API",
-		"description": "Complete API collection for the Betting League Championship platform with 186 endpoints across 12 core modules.\n\n**Features:**\n- Multi-sport betting platform\n- Social features with groups\n- Real-time match updates\n- Enterprise security with JWT\n- Comprehensive audit logging\n- Enhanced enum validation system\n- Field architecture with 817 total fields\n\n**Base URL:** {{base_url}}/api/v1\n\n**Authentication:** Bearer JWT token\n\n**Version:** 1.0\n**Last Updated:** October 5, 2025\n**Environment:** Updated with latest enum fixes and field architecture",
-		"version": "1.0.0",
+		"description": "Complete API collection for the Betting League Championship platform with 149 endpoints across 12 core modules.\n\n**Features:**\n- Multi-sport betting platform with FIFA World Cup 2022 dataset\n- Complete tournament data: 32 teams, 127 players, 64 matches\n- Social features with 5 betting groups\n- Real-time match updates with historical results\n- Enterprise security with JWT authentication\n- Comprehensive audit logging\n- Enhanced enum validation system\n\n**FIFA World Cup 2022 Dataset:**\n- All 32 participating teams\n- 127 players from all teams (3-5 per team)\n- Complete 64-match tournament (group stage to final)\n- Historical match results and statistics\n- 5 betting groups with sample data\n- 6 test users including admin\n\n**Base URL:** {{base_url}}/api/v1\n\n**Authentication:** Bearer JWT token\n\n**Version:** 1.2.0\n**Last Updated:** October 5, 2025\n**Environment:** FIFA World Cup 2022 complete dataset deployed",
+		"version": "1.2.0",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -120,6 +120,374 @@
 							"raw": "{{base_url}}/api/v1/auth/logout",
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "auth", "logout"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🏆 FIFA World Cup 2022",
+			"description": "FIFA World Cup 2022 specific endpoints for testing the complete tournament dataset",
+			"item": [
+				{
+					"name": "Get Football Sport",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/sports/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sports", ""]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.environment.set('sport_id', response[0].id);",
+									"        pm.environment.set('football_sport_id', response[0].id);",
+									"        console.log('Football sport ID saved:', response[0].id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get World Cup Teams (All 32)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/teams/?sport_id={{football_sport_id}}&limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "teams", ""],
+							"query": [
+								{"key": "sport_id", "value": "{{football_sport_id}}"},
+								{"key": "limit", "value": "50"}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    console.log('Total World Cup teams found:', response.length);",
+									"    if (response.length > 0) {",
+									"        // Save first team for testing",
+									"        pm.environment.set('team_id', response[0].id);",
+									"        // Save Argentina team ID if found",
+									"        const argentina = response.find(team => team.name === 'Argentina');",
+									"        if (argentina) {",
+									"            pm.environment.set('argentina_team_id', argentina.id);",
+									"            console.log('Argentina team ID saved:', argentina.id);",
+									"        }",
+									"        // Save Brazil team ID if found",
+									"        const brazil = response.find(team => team.name === 'Brazil');",
+									"        if (brazil) {",
+									"            pm.environment.set('brazil_team_id', brazil.id);",
+									"            console.log('Brazil team ID saved:', brazil.id);",
+									"        }",
+									"    }",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Argentina Players (Messi, etc.)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/teams/{{argentina_team_id}}/players",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "teams", "{{argentina_team_id}}", "players"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    console.log('Argentina players found:', response.length);",
+									"    if (response.length > 0) {",
+									"        // Save first player for testing",
+									"        pm.environment.set('player_id', response[0].id);",
+									"        // Look for Messi",
+									"        const messi = response.find(player => player.name.includes('Messi'));",
+									"        if (messi) {",
+									"            pm.environment.set('messi_player_id', messi.id);",
+									"            console.log('Messi player ID saved:', messi.id);",
+									"        }",
+									"    }",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get FIFA World Cup 2022 Competition",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/competitions/?sport_id={{football_sport_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "competitions", ""],
+							"query": [
+								{"key": "sport_id", "value": "{{football_sport_id}}"}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        const worldCup = response.find(comp => comp.name.includes('FIFA World Cup 2022'));",
+									"        if (worldCup) {",
+									"            pm.environment.set('competition_id', worldCup.id);",
+									"            pm.environment.set('worldcup_competition_id', worldCup.id);",
+									"            console.log('FIFA World Cup 2022 competition ID saved:', worldCup.id);",
+									"        }",
+									"    }",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get World Cup Matches (All 64)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/matches/?competition_id={{worldcup_competition_id}}&limit=100",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "matches", ""],
+							"query": [
+								{"key": "competition_id", "value": "{{worldcup_competition_id}}"},
+								{"key": "limit", "value": "100"}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    console.log('Total World Cup matches found:', response.length);",
+									"    if (response.length > 0) {",
+									"        // Save first match for testing",
+									"        pm.environment.set('match_id', response[0].id);",
+									"        // Look for the final match",
+									"        const finalMatch = response.find(match => match.round && match.round.toLowerCase().includes('final'));",
+									"        if (finalMatch) {",
+									"            pm.environment.set('final_match_id', finalMatch.id);",
+									"            console.log('World Cup Final match ID saved:', finalMatch.id);",
+									"        }",
+									"    }",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get World Cup Betting Groups",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/groups/?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "groups", ""],
+							"query": [
+								{"key": "limit", "value": "10"}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    console.log('Betting groups found:', response.length);",
+									"    if (response.length > 0) {",
+									"        // Save first group for testing",
+									"        pm.environment.set('group_id', response[0].id);",
+									"        // Look for World Cup Champions group",
+									"        const championsGroup = response.find(group => group.name.includes('World Cup Champions'));",
+									"        if (championsGroup) {",
+									"            pm.environment.set('champions_group_id', championsGroup.id);",
+									"            console.log('World Cup Champions group ID saved:', championsGroup.id);",
+									"        }",
+									"    }",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Test Login with FIFA World Cup User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('access_token', response.access_token);",
+									"    pm.environment.set('refresh_token', response.refresh_token);",
+									"    console.log('Logged in as FIFA World Cup expert user');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"worldcup_expert@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Test Enum Values - Create User with Valid Status",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"enum_test_user\",\n  \"email\": \"enumtest@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"first_name\": \"Enum\",\n  \"last_name\": \"Test\",\n  \"date_of_birth\": \"1990-01-01T00:00:00Z\",\n  \"role\": \"user\",\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users", ""]
+						}
+					}
+				},
+				{
+					"name": "Test Enum Values - Create Competition with Valid Enums",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Enum Test Tournament\",\n  \"sport_id\": \"{{football_sport_id}}\",\n  \"format_type\": \"tournament\",\n  \"status\": \"upcoming\",\n  \"visibility\": \"public\",\n  \"country\": \"Test Country\",\n  \"start_date\": \"2025-12-01T00:00:00Z\",\n  \"end_date\": \"2025-12-31T00:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/competitions/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "competitions", ""]
+						}
+					}
+				},
+				{
+					"name": "Test Enum Values - Valid Match Status Update",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"finished\",\n  \"ended_at\": \"2025-10-15T17:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/matches/{{match_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "matches", "{{match_id}}", "status"]
 						}
 					}
 				}
@@ -735,7 +1103,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Premier League\",\n  \"sport_id\": \"{{sport_id}}\",\n  \"type\": \"league\",\n  \"country\": \"England\",\n  \"start_date\": \"2025-08-15T00:00:00Z\",\n  \"end_date\": \"2026-05-25T00:00:00Z\",\n  \"status\": \"upcoming\"\n}"
+							"raw": "{\n  \"name\": \"Premier League\",\n  \"sport_id\": \"{{sport_id}}\",\n  \"format_type\": \"league\",\n  \"country\": \"England\",\n  \"start_date\": \"2025-08-15T00:00:00Z\",\n  \"end_date\": \"2026-05-25T00:00:00Z\",\n  \"status\": \"upcoming\",\n  \"visibility\": \"public\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/competitions/",
@@ -795,11 +1163,11 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/matches/?status=upcoming&date_from=2025-10-05&limit=20",
+							"raw": "{{base_url}}/api/v1/matches/?status=scheduled&date_from=2025-10-05&limit=20",
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "matches", ""],
 							"query": [
-								{"key": "status", "value": "upcoming"},
+								{"key": "status", "value": "scheduled"},
 								{"key": "date_from", "value": "2025-10-05"},
 								{"key": "limit", "value": "20"}
 							]
@@ -1041,11 +1409,11 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/v1/bets/user/{{user_id}}?status=all&limit=50",
+							"raw": "{{base_url}}/api/v1/bets/user/{{user_id}}?status=pending&limit=50",
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "bets", "user", "{{user_id}}"],
 							"query": [
-								{"key": "status", "value": "all"},
+								{"key": "status", "value": "pending"},
 								{"key": "limit", "value": "50"}
 							]
 						}

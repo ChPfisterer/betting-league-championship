@@ -2,21 +2,30 @@
 
 ## 📋 Overview
 
-Complete Postman collection for testing the **Betting League Championship Platform** API with **186 endpoints** across **12 core modules**.
+Complete Postman collection for testing the **Betting League Championship Platform** API with **149 endpoints** across **12 core modules**, featuring a complete **FIFA World Cup 2022 dataset**.
 
 ### 🎯 Features
-- **Complete API Coverage**: All 186 endpoints organized by modules
+- **Complete API Coverage**: All 149 endpoints organized by modules
+- **FIFA World Cup 2022 Dataset**: Complete tournament with 32 teams, 127 players, 64 matches
 - **Automatic Authentication**: JWT token management with auto-refresh
 - **Environment Variables**: Development and production configurations
 - **Test Scripts**: Automatic ID extraction and token management
-- **Request Examples**: Real-world data samples for all endpoints
+- **Request Examples**: Real-world FIFA World Cup 2022 data samples
 - **Documentation**: Detailed descriptions and usage guidelines
+
+### 🏆 FIFA World Cup 2022 Features
+- **Complete Tournament Data**: All 32 participating teams
+- **Player Rosters**: 127 players including Messi, Mbappé, and other stars
+- **Match History**: All 64 matches from group stage to final with real results
+- **Betting Groups**: 5 configured betting groups for testing
+- **Test Users**: Pre-configured users including FIFA World Cup experts
+- **Real Historical Data**: Actual 2022 World Cup results and statistics
 
 ---
 
 ## 📁 Files Included
 
-- **`Betting_League_Championship_API.postman_collection.json`** - Main collection with all 186 endpoints
+- **`Betting_League_Championship_API.postman_collection.json`** - Main collection with all 149 endpoints + FIFA World Cup 2022 test section
 - **`Betting_League_Championship_Development.postman_environment.json`** - Development environment (localhost:8000)
 - **`Betting_League_Championship_Production.postman_environment.json`** - Production environment template
 - **`POSTMAN_README.md`** - This documentation file
@@ -36,17 +45,91 @@ Complete Postman collection for testing the **Betting League Championship Platfo
 2. Select `Betting_League_Championship_Development.postman_environment.json`
 3. Select the environment from the dropdown (top-right)
 
-### 3. Start API Server
+### 3. Start Development Environment
 ```bash
-cd backend
-uvicorn main:app --reload --port 8000
+./deploy-dev.sh
 ```
+This will:
+- Start all Docker services
+- Create database with complete FIFA World Cup 2022 dataset
+- Deploy 32 teams, 127 players, 64 matches, and 5 betting groups
 
 ### 4. Test Authentication
 1. Go to **🔐 Authentication** folder
 2. Run **Register User** (create a test user)
 3. Run **Login** (tokens will be automatically saved)
 4. Run **Get Current User** (verify authentication works)
+
+### 5. Test FIFA World Cup 2022 Dataset
+1. Go to **🏆 FIFA World Cup 2022** folder
+2. Run **Get Football Sport** (saves sport ID)
+3. Run **Get World Cup Teams (All 32)** (loads all teams, saves Argentina/Brazil IDs)
+4. Run **Get Argentina Players (Messi, etc.)** (loads player roster)
+5. Run **Get FIFA World Cup 2022 Competition** (saves competition ID)
+6. Run **Get World Cup Matches (All 64)** (loads complete tournament)
+7. Run **Get World Cup Betting Groups** (loads betting groups)
+8. Run **Test Login with FIFA World Cup User** (test pre-configured user)
+9. Run **Test Enum Values** requests (validates enum consistency)
+
+---
+
+## ✅ **Enum Validation**
+
+The collection includes comprehensive enum validation to ensure all request values match the current implementation:
+
+### **Validated Enums:**
+- **UserStatus**: `pending`, `active`, `suspended`, `banned`, `deactivated`
+- **UserRole**: `user`, `moderator`, `admin`, `super_admin`
+- **MatchStatus**: `scheduled`, `live`, `halftime`, `finished`, `cancelled`, `postponed`
+- **CompetitionStatus**: `draft`, `upcoming`, `active`, `completed`, `cancelled`
+- **CompetitionFormat**: `league`, `tournament`, `knockout`, `round_robin`
+- **BetStatus**: `pending`, `active`, `won`, `lost`, `void`, `cancelled`
+- **BetType**: `match_winner`, `total_goals`, `handicap`, `both_teams_score`
+
+### **Enum Testing:**
+The FIFA World Cup 2022 section includes specific enum validation tests:
+1. **User Creation** - Tests valid user status and role enums
+2. **Competition Creation** - Tests format, status, and visibility enums  
+3. **Match Status Updates** - Tests valid match status transitions
+
+**📋 See `POSTMAN_ENUM_VALIDATION.md` for complete enum reference and validation results.**
+
+---
+
+## 🏆 FIFA World Cup 2022 Test Data
+
+### Pre-configured Test Users
+- **worldcup_expert@example.com** / password123 - FIFA World Cup expert
+- **messi_fan@example.com** / password123 - Argentina fan
+- **mbappe_fan@example.com** / password123 - France fan  
+- **croatia_supporter@example.com** / password123 - Croatia supporter
+- **morocco_fan@example.com** / password123 - Morocco fan
+
+### Available Dataset
+- **32 Teams**: All FIFA World Cup 2022 participants
+- **127 Players**: Complete rosters including stars like Messi, Mbappé, Modrić
+- **64 Matches**: Complete tournament with real historical results
+- **5 Betting Groups**: 
+  - World Cup Champions (public)
+  - Group Stage Experts (public) 
+  - Knockout Stage Kings (private)
+  - Underdog Hunters (public)
+  - Goals and Scores (private)
+
+### Sample API Calls
+```bash
+# Get all World Cup teams
+GET /api/v1/teams/?sport_id={{football_sport_id}}&limit=50
+
+# Get Argentina players (including Messi)
+GET /api/v1/teams/{{argentina_team_id}}/players
+
+# Get all World Cup matches
+GET /api/v1/matches/?competition_id={{worldcup_competition_id}}&limit=100
+
+# Get betting groups
+GET /api/v1/groups/?limit=10
+```
 
 ---
 
@@ -58,20 +141,28 @@ uvicorn main:app --reload --port 8000
 - Token refresh and logout
 - Current user profile
 
-### 👤 Users (18+ endpoints)
+### 🏆 FIFA World Cup 2022 (7 endpoints)
+- Complete FIFA World Cup 2022 dataset testing
+- All 32 teams, 127 players, 64 matches
+- Real tournament data with historical results
+- Betting groups and pre-configured test users
+- Automatic ID extraction for easy testing
+- Current user profile
+
+### 👤 Users (15+ endpoints)
 - User CRUD operations
 - Profile management
 - Preferences configuration
 - User search and filtering
 - Activity tracking
 
-### 👥 Groups (16+ endpoints)
+### 👥 Groups (12+ endpoints)
 - Group creation and management
 - Member invitations
 - Group statistics
 - Privacy controls
 
-### 🔗 Group Memberships (18+ endpoints)
+### 🔗 Group Memberships (14+ endpoints)
 - Membership management
 - Role assignments
 - Invitation system

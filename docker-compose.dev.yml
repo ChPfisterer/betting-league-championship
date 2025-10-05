@@ -1,7 +1,5 @@
-version: '3.8'
-
-# Development Docker Compose for Betting League Championship
-# Simplified setup for backend development and testing
+# Professional Development Docker Compose for Betting League Championship
+# Complete setup for backend development, testing, and API verification
 
 services:
   # PostgreSQL Database
