@@ -226,14 +226,14 @@ class UserService:
             or_(User.username == username, User.email == username)
         ).first()
         
-        if not user or user.status != UserStatus.ACTIVE:
+        if not user or user.status != UserStatus.ACTIVE.value:
             return None
         
-        if not verify_password(password, user.password_hash):
+        if not user.check_password(password):
             return None
         
         # Update last login
-        user.update_last_login()
+        user.record_login()
         db.commit()
         
         return user
