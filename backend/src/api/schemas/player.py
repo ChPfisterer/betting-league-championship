@@ -375,22 +375,22 @@ class PlayerStats(BaseModel):
     """Player statistics schema."""
     
     # General stats
-    matches_played = Field(..., description="Total matches played")
-    matches_started = Field(..., description="Matches started")
-    minutes_played = Field(..., description="Total minutes played")
+    matches_played: int = Field(..., description="Total matches played")
+    matches_started: int = Field(..., description="Matches started")
+    minutes_played: int = Field(..., description="Total minutes played")
     
     # Performance stats (sport-agnostic)
-    goals_scored = Field(None, description="Goals/points scored")
-    assists = Field(None, description="Assists")
-    yellow_cards = Field(None, description="Yellow cards received")
-    red_cards = Field(None, description="Red cards received")
+    goals_scored: Optional[int] = Field(None, description="Goals/points scored")
+    assists: Optional[int] = Field(None, description="Assists")
+    yellow_cards: Optional[int] = Field(None, description="Yellow cards received")
+    red_cards: Optional[int] = Field(None, description="Red cards received")
     
     # Additional stats (JSON for sport-specific metrics)
-    detailed_stats = Field(None, description="Sport-specific detailed statistics")
+    detailed_stats: Optional[dict] = Field(None, description="Sport-specific detailed statistics")
     
     # Season/period info
-    season_id = Field(None, description="Season these stats are for")
-    last_updated = Field(..., description="When stats were last updated")
+    season_id: Optional[UUID] = Field(None, description="Season these stats are for")
+    last_updated: datetime = Field(..., description="When stats were last updated")
 
     class Config:
         from_attributes = True
@@ -399,7 +399,7 @@ class PlayerStats(BaseModel):
 class PlayerWithStats(PlayerResponse):
     """Player response with statistics."""
     
-    stats = Field(..., description="Player statistics")
+    stats: PlayerStats = Field(..., description="Player statistics")
 
     class Config:
         from_attributes = True
@@ -408,13 +408,13 @@ class PlayerWithStats(PlayerResponse):
 class PlayerTransfer(BaseModel):
     """Player transfer schema."""
     
-    player_id = Field(..., description="Player ID")
-    from_team_id = Field(None, description="Previous team ID")
-    to_team_id = Field(..., description="New team ID")
-    transfer_date = Field(..., description="Transfer date")
-    transfer_fee = Field(None, description="Transfer fee")
-    transfer_type = Field(..., description="Type of transfer")
-    notes = Field(None, description="Transfer notes")
+    player_id: UUID = Field(..., description="Player ID")
+    from_team_id: Optional[UUID] = Field(None, description="Previous team ID")
+    to_team_id: UUID = Field(..., description="New team ID")
+    transfer_date: date = Field(..., description="Transfer date")
+    transfer_fee: Optional[float] = Field(None, description="Transfer fee")
+    transfer_type: str = Field(..., description="Type of transfer")
+    notes: Optional[str] = Field(None, description="Transfer notes")
 
     class Config:
         from_attributes = True
@@ -423,13 +423,13 @@ class PlayerTransfer(BaseModel):
 class PlayerInjury(BaseModel):
     """Player injury schema."""
     
-    player_id = Field(..., description="Player ID")
-    injury_type = Field(..., description="Type of injury")
-    injury_date = Field(..., description="When injury occurred")
-    expected_return = Field(None, description="Expected return date")
-    severity = Field(None, description="Injury severity")
-    description = Field(None, description="Injury description")
-    is_resolved = Field(False, description="Whether injury is resolved")
+    player_id: UUID = Field(..., description="Player ID")
+    injury_type: str = Field(..., description="Type of injury")
+    injury_date: date = Field(..., description="When injury occurred")
+    expected_return: Optional[date] = Field(None, description="Expected return date")
+    severity: Optional[str] = Field(None, description="Injury severity")
+    description: Optional[str] = Field(None, description="Injury description")
+    is_resolved: bool = Field(False, description="Whether injury is resolved")
 
     class Config:
         from_attributes = True
@@ -438,12 +438,12 @@ class PlayerInjury(BaseModel):
 class PlayerPerformanceRating(BaseModel):
     """Player performance rating schema."""
     
-    player_id = Field(..., description="Player ID")
-    match_id = Field(None, description="Match ID (if match-specific)")
-    rating = Field(..., ge=0, le=10, description="Performance rating (0-10)")
-    rating_source = Field(..., description="Source of the rating")
-    notes = Field(None, description="Rating notes")
-    created_at = Field(..., description="When rating was given")
+    player_id: UUID = Field(..., description="Player ID")
+    match_id: Optional[UUID] = Field(None, description="Match ID (if match-specific)")
+    rating: float = Field(..., ge=0, le=10, description="Performance rating (0-10)")
+    rating_source: str = Field(..., description="Source of the rating")
+    notes: Optional[str] = Field(None, description="Rating notes")
+    created_at: datetime = Field(..., description="When rating was given")
 
     class Config:
         from_attributes = True
@@ -452,15 +452,67 @@ class PlayerPerformanceRating(BaseModel):
 class PlayerSearchFilter(BaseModel):
     """Advanced player search filters."""
     
-    team_id = Field(None, description="Filter by team")
-    position = Field(None, description="Filter by position")
-    nationality = Field(None, description="Filter by nationality")
-    age_min = Field(None, ge=10, description="Minimum age")
-    age_max = Field(None, le=60, description="Maximum age")
-    status = Field(None, description="Filter by player status")
-    is_captain = Field(None, description="Filter captains only")
-    market_value_min = Field(None, description="Minimum market value")
-    market_value_max = Field(None, description="Maximum market value")
+    team_id: Optional[UUID] = Field(None, description="Filter by team")
+    position: Optional[PlayerPosition] = Field(None, description="Filter by position")
+    nationality: Optional[str] = Field(None, description="Filter by nationality")
+    age_min: Optional[int] = Field(None, ge=10, description="Minimum age")
+    age_max: Optional[int] = Field(None, le=60, description="Maximum age")
+    status: Optional[PlayerStatus] = Field(None, description="Filter by player status")
+    is_captain: Optional[bool] = Field(None, description="Filter captains only")
+    market_value_min: Optional[float] = Field(None, description="Minimum market value")
+    market_value_max: Optional[float] = Field(None, description="Maximum market value")
+
+    class Config:
+        from_attributes = True
+
+
+# Additional schemas for player endpoints
+class PlayerTransferCreate(BaseModel):
+    """Schema for creating a player transfer."""
+    
+    to_team_id: UUID = Field(..., description="New team ID")
+    transfer_fee: Optional[float] = Field(None, description="Transfer fee")
+    transfer_type: str = Field("permanent", description="Type of transfer")
+    notes: Optional[str] = Field(None, description="Transfer notes")
+
+    class Config:
+        from_attributes = True
+
+
+class PlayerContractUpdate(BaseModel):
+    """Schema for updating player contract details."""
+    
+    contract_start: Optional[date] = Field(None, description="Contract start date")
+    contract_end: Optional[date] = Field(None, description="Contract end date")
+    salary: Optional[float] = Field(None, ge=0, description="Player's salary")
+    market_value: Optional[float] = Field(None, ge=0, description="Player's market value")
+
+    class Config:
+        from_attributes = True
+
+
+class PlayerTransferResponse(BaseModel):
+    """Schema for player transfer response."""
+    
+    id: UUID = Field(..., description="Transfer ID")
+    player_id: UUID = Field(..., description="Player ID")
+    from_team_id: Optional[UUID] = Field(None, description="Previous team ID")
+    to_team_id: UUID = Field(..., description="New team ID")
+    transfer_date: date = Field(..., description="Transfer date")
+    transfer_fee: Optional[float] = Field(None, description="Transfer fee")
+    transfer_type: str = Field(..., description="Type of transfer")
+    notes: Optional[str] = Field(None, description="Transfer notes")
+    created_at: datetime = Field(..., description="Transfer creation timestamp")
+
+    class Config:
+        from_attributes = True
+
+
+class PlayerWithHistory(PlayerResponse):
+    """Player response with transfer and contract history."""
+    
+    transfer_history: List[PlayerTransfer] = Field([], description="Transfer history")
+    contract_history: List[dict] = Field([], description="Contract history")
 
     class Config:
         from_attributes = True

@@ -13,7 +13,7 @@ from . import (
     competitions,
     seasons,
     matches,
-    # players,  # Temporarily disabled for testing
+    players,
     bets,
     results,
     group_memberships,
