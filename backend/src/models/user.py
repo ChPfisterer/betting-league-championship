@@ -605,7 +605,7 @@ class User(Base):
     # Relationships
     audit_logs = relationship(
         "AuditLog",
-        back_populates="user",
+        foreign_keys="AuditLog.user_id",
         lazy="dynamic",
         cascade="all, delete-orphan"
     )

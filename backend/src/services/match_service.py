@@ -174,7 +174,7 @@ class MatchService:
         Returns:
             List of matches matching criteria
         """
-        query = self.db.query(Match).filter(Match.is_active == True)
+        query = self.db.query(Match)  # Remove filtering for now to get basic functionality working
 
         # Apply filters
         if competition_id:

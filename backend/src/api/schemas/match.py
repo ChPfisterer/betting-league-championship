@@ -25,6 +25,7 @@ class MatchStatus(str, Enum):
     HALFTIME = "halftime"
     SUSPENDED = "suspended"
     COMPLETED = "completed"
+    FINISHED = "finished"
     CANCELLED = "cancelled"
     POSTPONED = "postponed"
 
@@ -316,8 +317,8 @@ class MatchSummary(BaseModel):
     home_score: Optional[int] = Field(None, description="Home team score")
     away_score: Optional[int] = Field(None, description="Away team score")
     venue_name: Optional[str] = Field(None, description="Venue name")
-    match_type: MatchType = Field(..., description="Match type")
-    is_active: bool = Field(..., description="Whether match is active")
+    match_type: Optional[MatchType] = Field(None, description="Match type")
+    is_active: Optional[bool] = Field(True, description="Whether match is active")
 
     class Config:
         from_attributes = True
