@@ -1,0 +1,660 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Betting League Championship - Developer Manual</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2E3440;
+            border-bottom: 3px solid #5E81AC;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #3B4252;
+            border-bottom: 1px solid #D8DEE9;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #434C5E;
+            margin-top: 25px;
+        }
+        code {
+            background-color: #F5F5F5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        }
+        pre {
+            background-color: #F8F9FA;
+            border: 1px solid #E1E4E8;
+            border-radius: 6px;
+            padding: 16px;
+            overflow-x: auto;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 14px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+        .toc {
+            background-color: #F6F8FA;
+            border: 1px solid #D0D7DE;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        .api-endpoint {
+            background-color: #F0F8FF;
+            border-left: 4px solid #0366D6;
+            padding: 8px 12px;
+            margin: 8px 0;
+            font-family: monospace;
+        }
+        .highlight {
+            background-color: #FFF3CD;
+            border: 1px solid #FFEAA7;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+<h1>Betting League Championship Platform</h1>
+<h2>Developer Manual v1.0</h2>
+<br>
+<h3>📋 Table of Contents</h3>
+<p>1. [Overview](#overview)</p>
+<p>2. [Architecture](#architecture)</p>
+<p>3. [API Reference](#api-reference)</p>
+<p>4. [Database](#database)</p>
+<p>5. [Security](#security)</p>
+<p>6. [Development](#development)</p>
+<p>7. [Examples](#examples)</p>
+<p>8. [Deployment](#deployment)</p>
+<br>
+<hr>
+<br>
+<h2>🎯 Overview</h2>
+<br>
+<p><strong>Multi-sport betting platform<strong> with social features, real-time updates, and enterprise-grade security.</p>
+<br>
+<h3>Tech Stack</h3>
+<li>**Backend**: Python 3.12 + FastAPI 0.115.x</li>
+<li>**Database**: PostgreSQL 17.x</li>
+<li>**Authentication**: JWT + Keycloak ready</li>
+<li>**Validation**: Pydantic v2</li>
+<li>**Testing**: Comprehensive TDD with pytest</li>
+<br>
+<h3>Key Features</h3>
+<li>**186 API Endpoints** across 12 core modules</li>
+<li>**Multi-sport Support** (football, basketball, tennis, etc.)</li>
+<li>**Social Betting** with groups and memberships</li>
+<li>**Real-time Updates** for live matches and betting</li>
+<li>**Enterprise Security** with audit logging</li>
+<li>**Risk Management** with fraud detection</li>
+<li>**GDPR Compliant** with data export/deletion</li>
+<br>
+<hr>
+<br>
+<h2>🏗️ Architecture</h2>
+<br>
+<h3>System Overview</h3>
+<pre><code class=''>Frontend (Angular 20) ←→ Backend API (FastAPI) ←→ Database (PostgreSQL)
+                            ↓
+                       Auth Server (Keycloak)
+</pre>
+<br>
+<h3>Backend Layers</h3>
+<br>
+<h4>1. **API Layer** (`src/api/`)</h4>
+<li>RESTful endpoints with OpenAPI documentation</li>
+<li>Pydantic schemas for request/response validation</li>
+<li>JWT authentication middleware</li>
+<li>Standardized error handling</li>
+<br>
+<h4>2. **Service Layer** (`src/services/`)</h4>
+<li>Business logic separation</li>
+<li>Data validation and transformation</li>
+<li>Inter-service communication</li>
+<li>Transaction management</li>
+<br>
+<h4>3. **Data Layer** (`src/models/`)</h4>
+<li>SQLAlchemy ORM models</li>
+<li>Database relationships and constraints</li>
+<li>Performance indexes</li>
+<li>Data validation</li>
+<br>
+<h4>4. **Core Layer** (`src/core/`)</h4>
+<li>Configuration management</li>
+<li>Security utilities</li>
+<li>Database connection handling</li>
+<li>Shared utilities</li>
+<br>
+<hr>
+<br>
+<h2>🚀 API Reference</h2>
+<br>
+<h3>Base URLs</h3>
+<li>**Development**: `http://localhost:8000/api/v1`</li>
+<li>**Production**: `https://api.bettingleague.com/api/v1`</li>
+<br>
+<h3>Core APIs (186 Endpoints Total)</h3>
+<br>
+<h4>🔐 Authentication (5 endpoints)</h4>
+<pre><code class='http'>POST   /auth/register     # User registration
+POST   /auth/login        # User login with JWT
+POST   /auth/logout       # Secure logout
+POST   /auth/refresh      # Token refresh
+GET    /auth/me          # Current user profile
+</pre>
+<br>
+<h4>👤 Users API (18 endpoints)</h4>
+<pre><code class='http'>GET    /users/                    # List users with filtering
+POST   /users/                    # Create new user
+GET    /users/{id}               # Get user details
+PUT    /users/{id}               # Update user profile
+DELETE /users/{id}               # Delete user (soft delete)
+GET    /users/{id}/profile       # Detailed profile
+PUT    /users/{id}/preferences   # Update preferences
+POST   /users/search             # Advanced user search
+GET    /users/{id}/activity      # User activity history
+PUT    /users/{id}/kyc           # KYC verification
+</pre>
+<br>
+<h4>👥 Groups API (16 endpoints)</h4>
+<pre><code class='http'>GET    /groups/                  # List groups
+POST   /groups/                  # Create group
+GET    /groups/{id}             # Group details
+PUT    /groups/{id}             # Update group
+DELETE /groups/{id}             # Delete group
+GET    /groups/{id}/members     # Group members
+POST   /groups/{id}/invite      # Invite member
+GET    /groups/{id}/statistics  # Group analytics
+</pre>
+<br>
+<h4>🏃‍♂️ Group Memberships API (18 endpoints)</h4>
+<pre><code class='http'>GET    /group-memberships/                    # List memberships
+POST   /group-memberships/                    # Create membership
+GET    /group-memberships/{id}               # Membership details
+PUT    /group-memberships/{id}/role          # Change member role
+DELETE /group-memberships/{id}               # Remove membership
+POST   /group-memberships/invite             # Send invitation
+GET    /group-memberships/user/{user_id}     # User's memberships
+</pre>
+<br>
+<h4>⚽ Sports API (12 endpoints)</h4>
+<pre><code class='http'>GET    /sports/                 # List all sports
+POST   /sports/                 # Add new sport
+GET    /sports/{id}            # Sport details
+PUT    /sports/{id}            # Update sport
+DELETE /sports/{id}            # Remove sport
+GET    /sports/{id}/seasons    # Sport seasons
+GET    /sports/{id}/statistics # Sport analytics
+PUT    /sports/{id}/activate   # Activate/deactivate
+</pre>
+<br>
+<h4>🏆 Teams API (14 endpoints)</h4>
+<pre><code class='http'>GET    /teams/                  # List teams
+POST   /teams/                  # Create team
+GET    /teams/{id}             # Team details
+PUT    /teams/{id}             # Update team
+DELETE /teams/{id}             # Delete team
+GET    /teams/{id}/players     # Team roster
+POST   /teams/{id}/players     # Add player to team
+GET    /teams/{id}/statistics  # Team performance
+</pre>
+<br>
+<h4>🏅 Competitions API (16 endpoints)</h4>
+<pre><code class='http'>GET    /competitions/                    # List competitions
+POST   /competitions/                    # Create competition
+GET    /competitions/{id}               # Competition details
+PUT    /competitions/{id}               # Update competition
+DELETE /competitions/{id}               # Delete competition
+GET    /competitions/{id}/matches       # Competition matches
+GET    /competitions/{id}/standings     # Current standings
+POST   /competitions/{id}/start         # Start competition
+</pre>
+<br>
+<h4>📅 Seasons API (14 endpoints)</h4>
+<pre><code class='http'>GET    /seasons/                # List seasons
+POST   /seasons/                # Create season
+GET    /seasons/{id}           # Season details
+PUT    /seasons/{id}           # Update season
+DELETE /seasons/{id}           # Delete season
+GET    /seasons/{id}/matches   # Season fixtures
+PUT    /seasons/{id}/start     # Start season
+</pre>
+<br>
+<h4>⚽ Matches API (16 endpoints)</h4>
+<pre><code class='http'>GET    /matches/                      # List matches
+POST   /matches/                      # Schedule match
+GET    /matches/{id}                 # Match details
+PUT    /matches/{id}                 # Update match
+PUT    /matches/{id}/status          # Update status
+GET    /matches/{id}/statistics      # Match stats
+POST   /matches/search               # Search matches
+GET    /matches/upcoming             # Upcoming fixtures
+GET    /matches/live                 # Live matches
+</pre>
+<br>
+<h4>🏃‍♂️ Players API (14 endpoints)</h4>
+<pre><code class='http'>GET    /players/                 # List players
+POST   /players/                 # Add player
+GET    /players/{id}            # Player profile
+PUT    /players/{id}            # Update player
+DELETE /players/{id}            # Remove player
+GET    /players/{id}/statistics # Player stats
+POST   /players/search          # Search players
+</pre>
+<br>
+<h4>🎰 Bets API (18 endpoints)</h4>
+<pre><code class='http'>GET    /bets/                    # List bets
+POST   /bets/                    # Place bet
+GET    /bets/{id}               # Bet details
+PUT    /bets/{id}               # Update bet
+DELETE /bets/{id}               # Cancel bet
+POST   /bets/{id}/settle        # Settle bet
+GET    /bets/user/{user_id}     # User's bets
+GET    /bets/statistics         # Betting analytics
+POST   /bets/bulk               # Bulk operations
+GET    /bets/{id}/history       # Bet history
+</pre>
+<br>
+<h4>📊 Results API (14 endpoints)</h4>
+<pre><code class='http'>GET    /results/                     # List results
+POST   /results/                     # Record result
+GET    /results/{id}                # Result details
+PUT    /results/{id}                # Update result
+PUT    /results/{id}/verify         # Verify result
+GET    /results/match/{match_id}    # Match results
+POST   /results/bulk                # Bulk results
+</pre>
+<br>
+<h4>📋 Audit Logs API (16 endpoints)</h4>
+<pre><code class='http'>GET    /audit-logs/                           # List audit logs
+POST   /audit-logs/                           # Create log entry
+GET    /audit-logs/{id}                      # Log details
+GET    /audit-logs/statistics/overview       # Statistics
+GET    /audit-logs/analytics/security        # Security analytics
+POST   /audit-logs/search                    # Search logs
+POST   /audit-logs/export                    # Export logs
+POST   /audit-logs/archive                   # Archive logs
+GET    /audit-logs/user/{user_id}/activity   # User activity
+</pre>
+<br>
+<hr>
+<br>
+<h2>🗄️ Database</h2>
+<br>
+<h3>Core Tables</h3>
+<br>
+<h4>Users</h4>
+<pre><code class='sql'>users (
+    id UUID PRIMARY KEY,
+    username VARCHAR(50) UNIQUE,
+    email VARCHAR(255) UNIQUE,
+    password_hash VARCHAR(255),
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    date_of_birth TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'pending',
+    role VARCHAR(20) DEFAULT 'user',
+    kyc_status VARCHAR(20) DEFAULT 'not_started',
+    created_at TIMESTAMP DEFAULT NOW()
+)
+</pre>
+<br>
+<h4>Bets</h4>
+<pre><code class='sql'>bets (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users(id),
+    match_id UUID REFERENCES matches(id),
+    bet_type VARCHAR(50),
+    stake DECIMAL(10,2),
+    odds DECIMAL(8,3),
+    potential_payout DECIMAL(12,2),
+    status VARCHAR(20) DEFAULT 'pending',
+    placed_at TIMESTAMP DEFAULT NOW()
+)
+</pre>
+<br>
+<h4>Groups</h4>
+<pre><code class='sql'>groups (
+    id UUID PRIMARY KEY,
+    name VARCHAR(100),
+    description TEXT,
+    privacy VARCHAR(20) DEFAULT 'public',
+    max_members INTEGER DEFAULT 100,
+    owner_id UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT NOW()
+)
+</pre>
+<br>
+<h3>Relationships</h3>
+<li>**Users** → **Bets** (1:many)</li>
+<li>**Users** ↔ **Groups** (many:many via GroupMemberships)</li>
+<li>**Matches** → **Bets** (1:many)</li>
+<li>**Teams** ↔ **Players** (many:many)</li>
+<li>**Competitions** → **Seasons** → **Matches** (hierarchical)</li>
+<br>
+<h3>Performance</h3>
+<li>**50+ Strategic Indexes** for query optimization</li>
+<li>**Composite Indexes** for common query patterns</li>
+<li>**Foreign Key Indexes** for relationship queries</li>
+<li>**JSON Indexes** for flexible data storage</li>
+<br>
+<hr>
+<br>
+<h2>🔐 Security</h2>
+<br>
+<h3>JWT Authentication</h3>
+<pre><code class='json'>{
+  "sub": "user_id",
+  "email": "user@example.com",
+  "role": "user",
+  "exp": 1672531200,
+  "iat": 1672444800
+}
+</pre>
+<br>
+<h3>Authorization Levels</h3>
+<li>**Public**: No auth required</li>
+<li>**User**: Basic user access</li>
+<li>**Moderator**: Elevated privileges</li>
+<li>**Admin**: Administrative access</li>
+<li>**Super Admin**: Full system access</li>
+<br>
+<h3>Security Features</h3>
+<li>**Bcrypt Password Hashing** with salt</li>
+<li>**JWT Token Authentication** with refresh</li>
+<li>**Rate Limiting** on all endpoints</li>
+<li>**Comprehensive Audit Logging** (60+ action types)</li>
+<li>**Input Validation** and sanitization</li>
+<li>**CORS Protection** and security headers</li>
+<li>**Role-Based Access Control** (RBAC)</li>
+<br>
+<h3>Audit Logging</h3>
+<li>**60+ Action Types**: User actions, betting, admin operations</li>
+<li>**Security Events**: Login failures, suspicious activity</li>
+<li>**Compliance**: GDPR data requests, audit trails</li>
+<li>**Analytics**: User behavior, system health</li>
+<br>
+<hr>
+<br>
+<h2>💻 Development</h2>
+<br>
+<h3>Quick Start</h3>
+<pre><code class='bash'># Clone and setup
+git clone https://github.com/ChPfisterer/betting-league-championship.git
+cd betting-league-championship/backend
+<br>
+# Virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+<br>
+# Install dependencies
+pip install -r requirements/dev.txt
+<br>
+# Setup database
+createdb betting_championship
+alembic upgrade head
+<br>
+# Run development server
+uvicorn main:app --reload --port 8000
+</pre>
+<br>
+<h3>Environment Variables</h3>
+<pre><code class='bash'>DATABASE_URL=postgresql://user:pass@localhost/betting_championship
+SECRET_KEY=your-secret-key-here
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+ENVIRONMENT=development
+</pre>
+<br>
+<h3>Docker Development</h3>
+<pre><code class='bash'># Run with Docker Compose
+docker-compose up -d
+<br>
+# Services available:
+# API: http://localhost:8000
+# Docs: http://localhost:8000/docs
+# Database: localhost:5432
+</pre>
+<br>
+<h3>Testing</h3>
+<pre><code class='bash'># Run all tests
+pytest
+<br>
+# Run with coverage
+pytest --cov=src --cov-report=html
+<br>
+# Run specific test types
+pytest tests/api/          # Contract tests
+pytest tests/integration/  # Integration tests
+pytest tests/models/       # Model tests
+</pre>
+<br>
+<hr>
+<br>
+<h2>📝 Examples</h2>
+<br>
+<h3>Authentication Flow</h3>
+<pre><code class='python'>import requests
+<br>
+# Login
+login_response = requests.post("http://localhost:8000/api/v1/auth/login", json={
+    "username": "user@example.com",
+    "password": "password123"
+})
+<br>
+token_data = login_response.json()
+headers = {"Authorization": f"Bearer {token_data['access_token']}"}
+<br>
+# Get current user
+user_response = requests.get(
+    "http://localhost:8000/api/v1/auth/me",
+    headers=headers
+)
+</pre>
+<br>
+<h3>Place a Bet</h3>
+<pre><code class='python'>bet_data = {
+    "match_id": "match-uuid-here",
+    "bet_type": "match_winner",
+    "selection": "home_team",
+    "stake": 10.00,
+    "odds": 2.50
+}
+<br>
+bet_response = requests.post(
+    "http://localhost:8000/api/v1/bets/",
+    json=bet_data,
+    headers=headers
+)
+</pre>
+<br>
+<h3>Create and Manage Group</h3>
+<pre><code class='python'># Create group
+group_data = {
+    "name": "My Betting Group",
+    "description": "Friends betting together",
+    "privacy": "private",
+    "max_members": 20
+}
+<br>
+group_response = requests.post(
+    "http://localhost:8000/api/v1/groups/",
+    json=group_data,
+    headers=headers
+)
+<br>
+group_id = group_response.json()["id"]
+<br>
+# Invite member
+invite_data = {
+    "email": "friend@example.com",
+    "role": "member",
+    "message": "Join our betting group!"
+}
+<br>
+requests.post(
+    f"http://localhost:8000/api/v1/groups/{group_id}/invite",
+    json=invite_data,
+    headers=headers
+)
+</pre>
+<br>
+<h3>Search and Filter</h3>
+<pre><code class='python'># Search users
+user_search = requests.get(
+    "http://localhost:8000/api/v1/users/",
+    params={
+        "query": "john",
+        "status": "active",
+        "skip": 0,
+        "limit": 10
+    },
+    headers=headers
+)
+<br>
+# Filter bets
+bet_filter = requests.get(
+    "http://localhost:8000/api/v1/bets/",
+    params={
+        "status": "won",
+        "date_from": "2025-01-01",
+        "date_to": "2025-12-31",
+        "min_stake": 5.00
+    },
+    headers=headers
+)
+</pre>
+<br>
+<hr>
+<br>
+<h2>🚀 Deployment</h2>
+<br>
+<h3>Production Checklist</h3>
+<li>[ ] Environment variables configured</li>
+<li>[ ] Database migrations applied</li>
+<li>[ ] SSL certificates installed</li>
+<li>[ ] Monitoring and logging setup</li>
+<li>[ ] Backup strategy implemented</li>
+<li>[ ] Load balancing configured</li>
+<li>[ ] Rate limiting enabled</li>
+<li>[ ] Security headers configured</li>
+<br>
+<h3>Docker Production</h3>
+<pre><code class='dockerfile'>FROM python:3.12-slim
+WORKDIR /app
+COPY requirements/prod.txt .
+RUN pip install -r prod.txt
+COPY src/ ./src/
+COPY main.py .
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+</pre>
+<br>
+<h3>Environment Configuration</h3>
+<pre><code class='bash'># Production settings
+DATABASE_URL=postgresql://user:pass@prod-db/betting_championship
+SECRET_KEY=production-secret-key
+ENVIRONMENT=production
+ALLOWED_HOSTS=["api.bettingleague.com"]
+CORS_ORIGINS=["https://bettingleague.com"]
+</pre>
+<br>
+<hr>
+<br>
+<h2>🔧 Troubleshooting</h2>
+<br>
+<h3>Common Issues</h3>
+<br>
+<h4>Database Connection</h4>
+<pre><code class='bash'># Test connection
+psql -h localhost -U postgres -d betting_championship
+<br>
+# Check environment
+echo $DATABASE_URL
+<br>
+# View logs
+docker logs betting_championship_db
+</pre>
+<br>
+<h4>Authentication Problems</h4>
+<pre><code class='bash'># Verify JWT secret
+echo $SECRET_KEY
+<br>
+# Decode token (for debugging)
+python -c "import jwt; print(jwt.decode('token', options={'verify_signature': False}))"
+</pre>
+<br>
+<h4>Performance Issues</h4>
+<pre><code class='bash'># Enable SQL logging (development)
+# Monitor slow queries
+# Check database indexes
+# Verify connection pooling
+<br>
+# Test API performance
+curl -w "Time: %{time_total}s\n" http://localhost:8000/api/v1/users/
+</pre>
+<br>
+<h3>Error Codes</h3>
+<li>**400**: Bad Request - Invalid input</li>
+<li>**401**: Unauthorized - Authentication required</li>
+<li>**403**: Forbidden - Insufficient permissions</li>
+<li>**404**: Not Found - Resource doesn't exist</li>
+<li>**422**: Validation Error - Input validation failed</li>
+<li>**500**: Internal Server Error - Server-side error</li>
+<br>
+<hr>
+<br>
+<h2>📚 Resources</h2>
+<br>
+<h3>Documentation</h3>
+<li>**API Docs**: http://localhost:8000/docs (Swagger UI)</li>
+<li>**Alternative Docs**: http://localhost:8000/redoc</li>
+<li>**OpenAPI Schema**: http://localhost:8000/openapi.json</li>
+<li>**GitHub**: https://github.com/ChPfisterer/betting-league-championship</li>
+<br>
+<h3>Support</h3>
+<li>**GitHub Issues**: Report bugs and feature requests</li>
+<li>**Tests**: Check `tests/` directory for usage examples</li>
+<li>**Database Schema**: See `alembic/versions/` for migrations</li>
+<br>
+<hr>
+<br>
+<h2>✅ Summary</h2>
+<br>
+<p>The <strong>Betting League Championship Platform<strong> provides:</p>
+<br>
+<p>🎯 <strong>Complete Backend Ecosystem<strong> - 186 endpoints across 12 modules</p>
+<p>🔐 <strong>Enterprise Security<strong> - JWT auth with comprehensive audit logging</p>
+<p>📊 <strong>Advanced Features<strong> - Social betting, risk management, analytics</p>
+<p>🧪 <strong>Comprehensive Testing<strong> - TDD methodology with extensive coverage</p>
+<p>🚀 <strong>Production Ready<strong> - Scalable architecture with performance optimization</p>
+<br>
+<p><strong>Version<strong>: 1.0</p>
+<p><strong>Last Updated<strong>: October 5, 2025</p>
+<p><strong>API Version<strong>: v1</p>
+<br>
+<hr>
+<br>
+<p>*This manual provides complete guidance for developing with the Betting League Championship platform. For additional support, refer to the GitHub repository or contact the development team.*</p>
+
+</body>
+</html>
