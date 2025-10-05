@@ -22,6 +22,26 @@ from models import (
     User, Group, GroupMembership, Bet, AuditLog
 )
 
+# Import enum classes for validation
+from src.models.season import SeasonStatus
+from src.models.competition import CompetitionStatus, CompetitionFormat, CompetitionVisibility
+from src.models.match import MatchStatus
+from src.models.result import ResultStatus
+from src.models.group_membership import MembershipRole, MembershipStatus
+from src.models.player import InjuryStatus
+from src.models.user import UserStatus, UserRole, KYCStatus
+
+
+def validate_enum_value(enum_class, value: str, context: str = "") -> str:
+    """Validate that a value exists in the given enum class."""
+    valid_values = [e.value for e in enum_class]
+    if value not in valid_values:
+        raise ValueError(
+            f"Invalid enum value '{value}' for {enum_class.__name__} {context}. "
+            f"Valid values: {', '.join(valid_values)}"
+        )
+    return value
+
 
 class WorldCupSeeder:
     """Seed data for 2022 FIFA World Cup."""
@@ -92,7 +112,7 @@ class WorldCupSeeder:
             start_date=datetime(2022, 11, 20).date(),
             end_date=datetime(2022, 12, 18).date(),
             is_current=False,
-            status="completed",
+            status=validate_enum_value(SeasonStatus, "completed", "for 2022 Season"),
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc)
         )
@@ -175,11 +195,11 @@ class WorldCupSeeder:
             name="FIFA World Cup 2022",
             slug="fifa-world-cup-2022",
             description="The 2022 FIFA World Cup held in Qatar",
-            format_type="knockout",
+            format_type=validate_enum_value(CompetitionFormat, "knockout", "for FIFA World Cup 2022"),
             start_date=datetime(2022, 11, 20).date(),
             end_date=datetime(2022, 12, 18).date(),
-            status="completed",
-            visibility="public",
+            status=validate_enum_value(CompetitionStatus, "completed", "for FIFA World Cup 2022"),
+            visibility=validate_enum_value(CompetitionVisibility, "public", "for FIFA World Cup 2022"),
             min_participants=32,
             max_participants=32,
             entry_fee=Decimal("0.00"),
@@ -398,7 +418,7 @@ class WorldCupSeeder:
                 market_value=Decimal("50000000.00"),  # $50M default
                 salary=Decimal("10000000.00"),  # $10M default
                 is_active=True,
-                injury_status="fit",
+                injury_status=validate_enum_value(InjuryStatus, "fit", f"for player {player_data['name']}"),
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc)
             )
@@ -535,8 +555,8 @@ class WorldCupSeeder:
                 id=uuid.uuid4(),
                 user_id=creator.id,
                 group_id=group.id,
-                role="admin",
-                status="active",
+                role=validate_enum_value(MembershipRole, "admin", f"for group {group_data['name']}"),
+                status=validate_enum_value(MembershipStatus, "active", f"for group {group_data['name']}"),
                 joined_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc)
@@ -655,7 +675,7 @@ class WorldCupSeeder:
                 started_at=scheduled_time,
                 finished_at=scheduled_time + timedelta(hours=2),
                 venue="Stadium in Qatar",
-                status="finished",
+                status=validate_enum_value(MatchStatus, "finished", f"for match {match_data.get('description', 'World Cup match')}"),
                 home_score=match_data["home_score"],
                 away_score=match_data["away_score"],
                 referee="FIFA Referee",
@@ -672,7 +692,7 @@ class WorldCupSeeder:
                 match_id=match.id,
                 home_score=match_data["home_score"],
                 away_score=match_data["away_score"],
-                status="final",
+                status=validate_enum_value(ResultStatus, "final", f"for result of match {match_data.get('description', 'World Cup match')}"),
                 is_official=True,
                 started_at=scheduled_time,
                 finished_at=scheduled_time + timedelta(hours=2),
