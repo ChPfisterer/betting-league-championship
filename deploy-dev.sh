@@ -145,7 +145,9 @@ print('Database tables created successfully!')
     # Use the COMPLETE FIFA World Cup 2022 seeder
     log_info "Running COMPLETE FIFA World Cup 2022 seeder (100+ players, 64 matches)..."
     # Use the FINAL comprehensive seeder as primary option
-    docker compose -f $COMPOSE_FILE exec backend python /app/FINAL_complete_world_cup_seeder.py    if [ $? -eq 0 ]; then
+    docker compose -f $COMPOSE_FILE exec backend python /app/FINAL_complete_world_cup_seeder.py
+    
+    if [ $? -eq 0 ]; then
         log_success "Database tables and COMPREHENSIVE FIFA World Cup 2022 dataset created successfully"
         
         # Display comprehensive summary
