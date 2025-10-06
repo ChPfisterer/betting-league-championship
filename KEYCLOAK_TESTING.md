@@ -51,8 +51,8 @@ curl -X POST http://localhost:8000/api/v1/auth/keycloak/oauth/token \
 
 ### Step 4: Test User Info with Token
 ```bash
-# Replace YOUR_ACCESS_TOKEN with the actual token from step 3
-curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+# Replace [TOKEN] with the actual access token from step 3
+curl --header "Authorization: Bearer [TOKEN]" \
   http://localhost:8000/api/v1/auth/keycloak/user/info | jq .
 ```
 

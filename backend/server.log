@@ -17,3 +17,13 @@ INFO:     connection rejected (403 Forbidden)
 INFO:     connection closed
 INFO:     192.168.178.157:54401 - "GET /loginMsg.js HTTP/1.1" 404 Not Found
 INFO:     192.168.178.157:54402 - "GET /cgi/get.cgi?cmd=home_login HTTP/1.1" 404 Not Found
+INFO:     192.168.1.20:51554 - "GET / HTTP/1.1" 200 OK
+INFO:     ('192.168.1.20', 51727) - "WebSocket /" 403
+INFO:     connection rejected (403 Forbidden)
+INFO:     connection closed
+INFO:     192.168.1.20:51734 - "GET /loginMsg.js HTTP/1.1" 404 Not Found
+INFO:     192.168.1.20:51735 - "GET /cgi/get.cgi?cmd=home_login HTTP/1.1" 404 Not Found
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [97882]
