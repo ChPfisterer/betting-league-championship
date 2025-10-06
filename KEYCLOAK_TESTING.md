@@ -51,28 +51,28 @@ curl -X POST http://localhost:8000/api/v1/auth/keycloak/oauth/token \
 
 ### Step 4: Test User Info with Token
 ```bash
-# Replace ACCESS_TOKEN with token from step 3
-curl -H "Authorization: Bearer ACCESS_TOKEN" \
+# Replace YOUR_ACCESS_TOKEN with the actual token from step 3
+curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   http://localhost:8000/api/v1/auth/keycloak/user/info | jq .
 ```
 
 ### Step 5: Test Token Refresh
 ```bash
-# Replace REFRESH_TOKEN with refresh token from step 3
+# Replace YOUR_REFRESH_TOKEN with refresh token from step 3
 curl -X POST http://localhost:8000/api/v1/auth/keycloak/oauth/refresh \
   -H "Content-Type: application/json" \
   -d '{
-    "refresh_token": "REFRESH_TOKEN"
+    "refresh_token": "YOUR_REFRESH_TOKEN"
   }' | jq .
 ```
 
 ### Step 6: Test Logout
 ```bash
-# Replace REFRESH_TOKEN with refresh token
+# Replace YOUR_REFRESH_TOKEN with refresh token
 curl -X POST http://localhost:8000/api/v1/auth/keycloak/oauth/logout \
   -H "Content-Type: application/json" \
   -d '{
-    "refresh_token": "REFRESH_TOKEN"
+    "refresh_token": "YOUR_REFRESH_TOKEN"
   }' | jq .
 ```
 
