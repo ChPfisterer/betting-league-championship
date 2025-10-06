@@ -20,7 +20,8 @@ from .endpoints import (
     results,
     group_memberships,
     audit_logs,
-    auth
+    auth,
+    keycloak_auth
 )
 
 # Create the main v1 API router
@@ -31,6 +32,12 @@ api_router.include_router(
     auth.router, 
     prefix="/auth", 
     tags=["Authentication"]
+)
+
+api_router.include_router(
+    keycloak_auth.router, 
+    prefix="/auth/keycloak", 
+    tags=["Keycloak OAuth"]
 )
 
 api_router.include_router(

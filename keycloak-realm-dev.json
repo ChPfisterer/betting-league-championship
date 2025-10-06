@@ -66,8 +66,8 @@
       "nodeReRegistrationTimeout": -1,
       "defaultClientScopes": ["web-origins", "role_list", "profile", "roles", "email"],
       "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"],
-      "redirectUris": ["http://localhost:8000/*"],
-      "webOrigins": ["http://localhost:8000"]
+      "redirectUris": ["http://localhost:8000/*", "http://localhost:4200/*", "http://localhost:8000/auth/callback"],
+      "webOrigins": ["http://localhost:8000", "http://localhost:4200"]
     },
     {
       "clientId": "betting-frontend",
