@@ -64,8 +64,10 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/betting_championship
       - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_EXTERNAL_URL=http://localhost:8090
       - KEYCLOAK_REALM=betting-platform
       - KEYCLOAK_CLIENT_ID=betting-api
+      - KEYCLOAK_CLIENT_SECRET=dev-client-secret
       - SECRET_KEY=dev-secret-key-change-in-production
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
       - REFRESH_TOKEN_EXPIRE_DAYS=7
