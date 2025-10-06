@@ -1,0 +1,58 @@
+/* You can add global styles to this file, and also import other style files */
+
+// Import Angular Material theme
+@use '@angular/material' as mat;
+
+// Include the core styles
+@include mat.core();
+
+// Apply the Material 3 theme
+$theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$violet-palette,
+    tertiary: mat.$cyan-palette,
+  ),
+  typography: (
+    brand-family: 'Comic Neue',
+    bold-weight: 900
+  ),
+  density: (
+    scale: 0
+  )
+));
+
+:root {
+  @include mat.all-component-themes($theme);
+}
+
+// Global styles
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+// Utility classes
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+
+.p-1 { padding: 8px; }
+.p-2 { padding: 16px; }
+.p-3 { padding: 24px; }
+
+.full-width { width: 100%; }
+.full-height { height: 100%; }

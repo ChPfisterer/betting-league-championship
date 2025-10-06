@@ -6,6 +6,7 @@ This module imports and exposes all API endpoints for version 1.
 
 from . import (
     auth,
+    keycloak_auth,
     users, 
     groups,
     sports,
@@ -22,6 +23,7 @@ from . import (
 
 __all__ = [
     "auth",
+    "keycloak_auth",
     "users", 
     "groups",
     "sports",

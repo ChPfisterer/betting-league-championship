@@ -1,0 +1,37 @@
+# Gitleaks configuration for betting-league-championship
+# This file customizes secret detection rules for our project
+
+[allowlist]
+  description = "Allowlist for documentation and test files"
+  
+  # Allow documentation examples with placeholder tokens
+  paths = [
+    '''KEYCLOAK_TESTING\.md''',
+    '''test_.*\.py''',
+    '''.*\.md'''
+  ]
+  
+  # Allow specific patterns in documentation
+  regexes = [
+    '''Bearer \[TOKEN\]''',
+    '''Bearer YOUR_ACCESS_TOKEN''',
+    '''Bearer \$\{.*\}''',
+    '''Bearer \$[A-Z_]+''',
+    '''"refresh_token": "YOUR_.*"''',
+    '''"code": "\{.*\}"'''
+  ]
+
+# Custom rules to reduce false positives in documentation
+[[rules]]
+  description = "Ignore curl auth headers in documentation files"
+  id = "curl-auth-header-docs"
+  regex = '''curl.*-H.*"Authorization: Bearer.*"'''
+  path = '''.*\.(md|txt|rst)$'''
+  
+  [rules.allowlist]
+    description = "Allow documentation examples"
+    regexes = [
+      '''Bearer \[TOKEN\]''',
+      '''Bearer YOUR_.*''',
+      '''Bearer \$.*'''
+    ]
