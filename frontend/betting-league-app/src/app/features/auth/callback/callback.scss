@@ -1,0 +1,38 @@
+.callback-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+
+.callback-card {
+  max-width: 400px;
+  width: 100%;
+}
+
+.loading-section {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.loading-text {
+  margin-top: 20px;
+  color: #666;
+}
+
+.error-section {
+  text-align: center;
+  padding: 20px;
+}
+
+.error-section h2 {
+  color: #f44336;
+  margin-bottom: 16px;
+}
+
+.error-section p {
+  margin-bottom: 20px;
+  color: #666;
+}
