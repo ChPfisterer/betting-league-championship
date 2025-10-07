@@ -14,9 +14,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { DashboardService, DashboardMatch, DashboardBet, DashboardStats, DashboardLeague } from '../../core/services/dashboard.service';
+import { BetDialogComponent, BetDialogData, BetPlacementResult } from '../betting/bet-dialog/bet-dialog.component';
 import { Subscription } from 'rxjs';
 
 // Use interfaces from dashboard service
@@ -29,9 +31,9 @@ interface Bet extends DashboardBet {}
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    CommonModule, 
-    MatCardModule, 
-    MatButtonModule, 
+    CommonModule,
+    MatCardModule,
+    MatButtonModule,
     MatIconModule,
     MatTabsModule,
     MatChipsModule,
@@ -43,7 +45,8 @@ interface Bet extends DashboardBet {}
     MatProgressSpinnerModule,
     MatExpansionModule,
     MatToolbarModule,
-    MatMenuModule
+    MatMenuModule,
+    MatDialogModule
   ],
   template: `
     <div class="dashboard-container">
@@ -1155,7 +1158,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private dashboardService: DashboardService,
     private snackBar: MatSnackBar,
-    private router: Router
+    private router: Router,
+    private dialog: MatDialog
   ) {
     this.currentUser = this.authService.getCurrentUser();
   }
@@ -1493,33 +1497,62 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async placeBet(match: Match, prediction: 'home' | 'draw' | 'away'): Promise<void> {
     try {
-      const predictionText = prediction === 'home' ? match.homeTeam : 
-                            prediction === 'away' ? match.awayTeam : 'Draw';
-      
-      // For now, show a simple prompt for stake amount
-      const stakeInput = prompt(`Place bet on: ${predictionText} @ ${match.odds[prediction]}\n\nEnter stake amount (EUR):`);
-      
-      if (stakeInput && !isNaN(Number(stakeInput))) {
-        const stake = Number(stakeInput);
-        
-        this.dashboardService.placeBet(match.id, prediction, match.odds[prediction], stake).subscribe({
-          next: (bet) => {
-            this.snackBar.open(`Bet placed successfully! Potential win: €${bet.potential_payout}`, 'Close', {
-              duration: 5000,
-              panelClass: ['success-snackbar']
-            });
-            // Refresh data to show new bet
-            this.loadDashboardData();
-          },
-          error: (error) => {
-            console.error('Error placing bet:', error);
-            this.showError('Failed to place bet. Please try again.');
-          }
-        });
-      }
+      // Create dialog data
+      const dialogData: BetDialogData = {
+        match: {
+          id: match.id,
+          homeTeam: match.homeTeam,
+          awayTeam: match.awayTeam,
+          kickoff: match.kickoff,
+          odds: match.odds,
+          status: match.status
+        },
+        selectedPrediction: prediction
+      };
+
+      // Open the betting dialog
+      const dialogRef = this.dialog.open(BetDialogComponent, {
+        width: '600px',
+        maxWidth: '95vw',
+        maxHeight: '90vh',
+        data: dialogData,
+        disableClose: false,
+        autoFocus: true
+      });
+
+      // Handle dialog result
+      dialogRef.afterClosed().subscribe((result: BetPlacementResult | null) => {
+        if (result) {
+          // Place the bet via the service
+          this.dashboardService.placeBet(
+            result.matchId, 
+            result.prediction, 
+            result.odds, 
+            result.stake
+          ).subscribe({
+            next: (bet) => {
+              this.snackBar.open(
+                `Bet placed successfully! Potential win: €${result.potentialWin.toFixed(2)}`, 
+                'Close', 
+                {
+                  duration: 5000,
+                  panelClass: ['success-snackbar']
+                }
+              );
+              // Refresh data to show new bet
+              this.loadDashboardData();
+            },
+            error: (error) => {
+              console.error('Error placing bet:', error);
+              this.showError('Failed to place bet. Please try again.');
+            }
+          });
+        }
+      });
+
     } catch (error) {
       console.error('Error in placeBet:', error);
-      this.showError('An error occurred while placing the bet');
+      this.showError('An error occurred while opening the betting dialog');
     }
   }
 
