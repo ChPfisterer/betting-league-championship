@@ -73,7 +73,9 @@ async def place_bet(
         logger.info(f"Placing bet for user {current_user.username}: {bet_data.model_dump()}")
         service = BetService(db)
         bet = service.create_bet(bet_data, current_user.id)
-        return BetResponse.model_validate(bet)
+        # Transform the model to response schema format
+        bet_dict = service.transform_bet_for_response(bet)
+        return BetResponse.model_validate(bet_dict)
     except ValueError as e:
         logger.error(f"Bet placement validation failed: {e}")
         raise HTTPException(status_code=400, detail=str(e))

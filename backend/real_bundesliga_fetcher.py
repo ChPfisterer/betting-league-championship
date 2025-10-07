@@ -4,6 +4,7 @@ import ssl
 import json
 import psycopg2
 import uuid
+import os
 from datetime import datetime, timezone, timedelta, timezone
 
 API_BASE_URL = "https://api.openligadb.de"
@@ -13,11 +14,11 @@ SEASON_YEAR = "2025"
 def get_db_connection():
     """Get database connection"""
     return psycopg2.connect(
-        host="localhost",
-        port=5432,
-        database="betting_championship", 
-        user="postgres",
-        password="postgres123"
+        host=os.getenv("POSTGRES_HOST", "postgres"),
+        port=os.getenv("POSTGRES_PORT", 5432),
+        database=os.getenv("POSTGRES_DB", "betting_championship"), 
+        user=os.getenv("POSTGRES_USER", "postgres"),
+        password=os.getenv("POSTGRES_PASSWORD", "postgres123")
     )
 
 def map_api_status_to_db_status(is_finished: bool) -> str:

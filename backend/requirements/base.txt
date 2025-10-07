@@ -27,6 +27,7 @@ email-validator==2.2.0
 # HTTP Client
 httpx==0.28.1
 requests==2.32.3
+aiohttp==3.10.11
 
 # Utilities
 python-dotenv==1.0.1

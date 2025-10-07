@@ -24,10 +24,10 @@ python create_tables.py || {
     echo "❌ Table creation failed, but continuing..."
 }
 
-# Run data seeding
-echo "🌱 Seeding database with FIFA World Cup 2022 data..."
-python FINAL_complete_world_cup_seeder.py || {
-    echo "⚠️  Data seeding failed, but continuing with empty database..."
+# Run comprehensive data seeding
+echo "🌱 Seeding database with all competition data..."
+python complete_data_seeder.py || {
+    echo "⚠️  Some data seeding may have failed, but continuing..."
 }
 
 echo "✅ Backend initialization complete!"
