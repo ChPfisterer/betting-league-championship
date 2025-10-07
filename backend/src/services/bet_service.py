@@ -7,7 +7,7 @@ and odds management. Handles all betting-related operations with proper
 validation and error handling.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from sqlalchemy.orm import Session
@@ -55,46 +55,35 @@ class BetService:
         if not match:
             raise ValueError(f"Match with ID {bet_data.match_id} not found")
         
-        if not match.allow_betting:
-            raise ValueError("Betting is not allowed on this match")
+        # Check if betting is allowed using the model's method
+        can_bet, bet_message = match.can_place_bet()
+        if not can_bet:
+            raise ValueError(bet_message)
         
-        # Check if betting is still open
-        if match.betting_closes_at and datetime.utcnow() > match.betting_closes_at:
-            raise ValueError("Betting has closed for this match")
-        
-        # Check if match has already started
-        if match.started_at:
-            raise ValueError("Cannot place bet on a match that has already started")
-        
-        # Validate group if specified
-        if bet_data.group_id:
-            group = self.db.query(Group).filter(Group.id == bet_data.group_id).first()
-            if not group:
-                raise ValueError(f"Group with ID {bet_data.group_id} not found")
-            
-            # Check if user is member of the group
-            # Note: This would need group membership validation
+        # Validate group if specified (Note: group_id field doesn't exist in Bet model yet)
+        # if bet_data.group_id:
+        #     group = self.db.query(Group).filter(Group.id == bet_data.group_id).first()
+        #     if not group:
+        #         raise ValueError(f"Group with ID {bet_data.group_id} not found")
+        #     
+        #     # Check if user is member of the group
+        #     # Note: This would need group membership validation
         
         # Create bet instance
         bet = Bet(
             user_id=user_id,
             match_id=bet_data.match_id,
-            group_id=bet_data.group_id,
+            # group_id=bet_data.group_id,  # This field doesn't exist in model
             bet_type=bet_data.bet_type,
-            amount=bet_data.amount,
+            stake_amount=bet_data.amount,  # Use stake_amount instead of amount
             odds=bet_data.odds,
             potential_payout=bet_data.potential_payout,
-            outcome=bet_data.outcome,
-            handicap_value=bet_data.handicap_value,
-            total_value=bet_data.total_value,
-            is_over=bet_data.is_over,
-            predicted_home_score=bet_data.predicted_home_score,
-            predicted_away_score=bet_data.predicted_away_score,
-            bet_parameters=bet_data.bet_parameters,
+            selection=bet_data.outcome.value if bet_data.outcome else None,  # Use selection instead of outcome
+            handicap=bet_data.handicap_value,  # Use handicap instead of handicap_value
             notes=bet_data.notes,
             status=BetStatus.PENDING,
-            placed_at=datetime.utcnow(),
-            is_active=True
+            placed_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc)
         )
         
         self.db.add(bet)
