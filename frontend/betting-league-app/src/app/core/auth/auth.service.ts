@@ -33,11 +33,10 @@ export interface AuthState {
 })
 export class AuthService {
   private readonly API_URL = environment.apiUrl;
-  private readonly KEYCLOAK_CONFIG = environment.keycloak;
-  
+
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
-  
+
   public currentUser$ = this.currentUserSubject.asObservable();
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
@@ -72,11 +71,6 @@ export class AuthService {
   login(): void {
     this.getAuthorizationUrl().subscribe({
       next: (response) => {
-        // Store state for verification
-        this.storeAuthState({
-          state: response.state
-        });
-        
         // Redirect to Keycloak
         window.location.href = response.authorize_url;
       },
@@ -96,14 +90,14 @@ export class AuthService {
         this.clearAuthState();
       }),
       switchMap(() => this.loadUserInfo()),
-      tap((user: User) => {
+      tap((user) => {
         this.currentUserSubject.next(user);
         this.isAuthenticatedSubject.next(true);
       }),
       catchError((error) => {
-        console.error('Callback handling failed:', error);
+        console.error('Authentication failed:', error);
         this.clearTokens();
-        return throwError(error);
+        return throwError(() => error);
       })
     );
   }
@@ -118,16 +112,20 @@ export class AuthService {
       return this.http.post(`${this.API_URL}/auth/keycloak/oauth/logout`, {
         refresh_token: refreshToken
       }).pipe(
-        tap(() => this.performLogout()),
-        catchError(() => {
-          // Even if logout request fails, clear local state
+        tap(() => {
           this.performLogout();
-          return throwError('Logout request failed');
+        }),
+        catchError(() => {
+          this.performLogout();
+          return throwError(() => 'Logout failed');
         })
       );
     } else {
       this.performLogout();
-      return throwError('No refresh token available');
+      return new Observable(observer => {
+        observer.next(null);
+        observer.complete();
+      });
     }
   }
 
@@ -138,35 +136,46 @@ export class AuthService {
     const refreshToken = this.getRefreshToken();
     
     if (!refreshToken) {
-      return throwError('No refresh token available');
+      return throwError(() => 'No refresh token available');
     }
 
-    return this.http.post<TokenResponse>(`${this.API_URL}/auth/keycloak/oauth/refresh`, {
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: environment.keycloak.clientId,
       refresh_token: refreshToken
-    }).pipe(
+    });
+
+    const headers = {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    };
+
+    return this.http.post<any>(
+      `${environment.keycloak.url}/realms/${environment.keycloak.realm}/protocol/openid-connect/token`,
+      body.toString(),
+      { headers }
+    ).pipe(
+      map((response: any) => ({
+        access_token: response.access_token,
+        refresh_token: response.refresh_token,
+        expires_in: response.expires_in,
+        token_type: response.token_type
+      })),
       tap((tokenResponse) => {
         this.storeTokens(tokenResponse);
       }),
       catchError((error) => {
         console.error('Token refresh failed:', error);
         this.performLogout();
-        return throwError(error);
+        return throwError(() => error);
       })
     );
   }
 
   /**
-   * Get current user info
+   * Get current user
    */
   getCurrentUser(): User | null {
     return this.currentUserSubject.value;
-  }
-
-  /**
-   * Check if user is authenticated
-   */
-  isAuthenticated(): boolean {
-    return this.isAuthenticatedSubject.value;
   }
 
   /**
@@ -188,31 +197,132 @@ export class AuthService {
   // Private methods
 
   private getAuthorizationUrl(): Observable<{authorize_url: string, state: string}> {
-    const params = new HttpParams()
-      .set('redirect_uri', `${window.location.origin}/auth/callback`);
+    return new Observable(observer => {
+      this.generateAuthUrl().then(result => {
+        observer.next(result);
+        observer.complete();
+      }).catch(error => {
+        observer.error(error);
+      });
+    });
+  }
+
+  private async generateAuthUrl(): Promise<{authorize_url: string, state: string}> {
+    // Generate state for CSRF protection
+    const state = this.generateRandomString(32);
     
-    return this.http.get<{authorize_url: string, state: string}>(
-      `${this.API_URL}/auth/keycloak/oauth/authorize-url`,
-      { params }
-    );
+    // Generate PKCE code verifier and challenge
+    const codeVerifier = this.generateRandomString(128);
+    const codeChallenge = await this.base64URLEncode(codeVerifier);
+    
+    // Store code verifier for later use
+    this.storeAuthState({
+      state: state,
+      codeVerifier: codeVerifier
+    });
+    
+    // Build authorization URL with PKCE
+    const params = new URLSearchParams({
+      client_id: environment.keycloak.clientId,
+      redirect_uri: `${window.location.origin}/auth/callback`,
+      response_type: 'code',
+      scope: 'openid profile email',
+      state: state,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256'
+    });
+
+    const authorize_url = `${environment.keycloak.url}/realms/${environment.keycloak.realm}/protocol/openid-connect/auth?${params.toString()}`;
+    
+    return { authorize_url, state };
+  }
+
+  private generateRandomString(length: number): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  private async base64URLEncode(codeVerifier: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(codeVerifier);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return btoa(String.fromCharCode(...new Uint8Array(digest)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
   }
 
   private verifyStateAndExchangeCode(code: string, state: string): Observable<TokenResponse> {
     const storedState = this.getStoredAuthState();
     
     if (!storedState || storedState.state !== state) {
-      return throwError('Invalid state parameter');
+      return throwError(() => 'Invalid state parameter');
     }
 
-    return this.http.post<TokenResponse>(`${this.API_URL}/auth/keycloak/oauth/token`, {
-      code,
-      redirect_uri: `${window.location.origin}/auth/callback`,
-      state
-    });
+    // Exchange code for tokens directly with Keycloak using PKCE
+    const bodyParams: any = {
+      grant_type: 'authorization_code',
+      client_id: environment.keycloak.clientId,
+      code: code,
+      redirect_uri: `${window.location.origin}/auth/callback`
+    };
+
+    // Add PKCE code verifier if available
+    if (storedState.codeVerifier) {
+      bodyParams.code_verifier = storedState.codeVerifier;
+    }
+
+    const body = new URLSearchParams(bodyParams);
+
+    const headers = {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    };
+
+    return this.http.post<any>(
+      `${environment.keycloak.url}/realms/${environment.keycloak.realm}/protocol/openid-connect/token`,
+      body.toString(),
+      { headers }
+    ).pipe(
+      map((response: any) => ({
+        access_token: response.access_token,
+        refresh_token: response.refresh_token,
+        expires_in: response.expires_in,
+        token_type: response.token_type
+      }))
+    );
   }
 
   private loadUserInfo(): Observable<User> {
-    return this.http.get<User>(`${this.API_URL}/auth/keycloak/user/info`);
+    const token = this.getAccessToken();
+    
+    if (!token) {
+      return throwError(() => 'No access token available');
+    }
+
+    try {
+      const decoded: any = jwtDecode(token);
+      
+      const user: User = {
+        id: decoded.sub || '',
+        username: decoded.preferred_username || decoded.username || '',
+        email: decoded.email || '',
+        firstName: decoded.given_name || '',
+        lastName: decoded.family_name || '',
+        roles: decoded.realm_access?.roles || [],
+        isAdmin: decoded.realm_access?.roles?.includes('admin') || false
+      };
+
+      return new Observable(observer => {
+        observer.next(user);
+        observer.complete();
+      });
+    } catch (error) {
+      return throwError(() => 'Invalid access token');
+    }
   }
 
   private performLogout(): void {
@@ -226,7 +336,7 @@ export class AuthService {
   private storeTokens(tokenResponse: TokenResponse): void {
     localStorage.setItem('access_token', tokenResponse.access_token);
     localStorage.setItem('refresh_token', tokenResponse.refresh_token);
-    localStorage.setItem('token_expires_at', 
+    localStorage.setItem('token_expires_at',
       (Date.now() + (tokenResponse.expires_in * 1000)).toString()
     );
   }
@@ -261,7 +371,7 @@ export class AuthService {
   private isTokenExpired(token: string): boolean {
     try {
       const decoded: any = jwtDecode(token);
-      const currentTime = Math.floor(Date.now() / 1000);
+      const currentTime = Date.now() / 1000;
       return decoded.exp < currentTime;
     } catch {
       return true;
