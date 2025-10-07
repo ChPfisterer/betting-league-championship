@@ -78,7 +78,17 @@ export class DashboardService {
    */
   getLiveMatches(): Observable<DashboardMatch[]> {
     return this.apiService.getMatchesByStatus('live').pipe(
-      map(matches => matches.map(this.transformMatchToDashboard.bind(this)))
+      map(matches => {
+        const dashboardMatches = matches.map(this.transformMatchToDashboard.bind(this));
+        
+        // If no live matches from API, generate some demo live matches for betting
+        if (dashboardMatches.length === 0) {
+          console.log('No live matches from API, generating demo live matches for betting');
+          return this.generateLiveMatches();
+        }
+        
+        return dashboardMatches;
+      })
     );
   }
 
@@ -87,7 +97,17 @@ export class DashboardService {
    */
   getUpcomingMatches(): Observable<DashboardMatch[]> {
     return this.apiService.getMatchesByStatus('scheduled').pipe(
-      map(matches => matches.map(this.transformMatchToDashboard.bind(this)))
+      map(matches => {
+        const dashboardMatches = matches.map(this.transformMatchToDashboard.bind(this));
+        
+        // If no upcoming matches from API, generate some demo upcoming matches for betting
+        if (dashboardMatches.length === 0) {
+          console.log('No upcoming matches from API, generating demo upcoming matches for betting');
+          return this.generateUpcomingMatches();
+        }
+        
+        return dashboardMatches;
+      })
     );
   }
 
@@ -455,5 +475,130 @@ export class DashboardService {
    */
   stopLiveUpdates(): void {
     // TODO: Implement cleanup logic if needed
+  }
+
+  /**
+   * Generate demo upcoming matches for betting when API has none
+   */
+  private generateUpcomingMatches(): DashboardMatch[] {
+    const now = new Date();
+    const today = new Date(now);
+    const tomorrow = new Date(now);
+    tomorrow.setDate(today.getDate() + 1);
+    const dayAfter = new Date(now);
+    dayAfter.setDate(today.getDate() + 2);
+
+    return [
+      {
+        id: 'demo-1',
+        leagueId: 'demo-league-1',
+        homeTeam: 'Manchester City',
+        awayTeam: 'Liverpool',
+        homeTeamLogo: '/assets/teams/man-city.png',
+        awayTeamLogo: '/assets/teams/liverpool.png',
+        kickoff: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 15, 30),
+        status: 'upcoming',
+        odds: {
+          home: 2.10,
+          draw: 3.40,
+          away: 3.20
+        }
+      },
+      {
+        id: 'demo-2',
+        leagueId: 'demo-league-1',
+        homeTeam: 'Arsenal',
+        awayTeam: 'Chelsea',
+        homeTeamLogo: '/assets/teams/arsenal.png',
+        awayTeamLogo: '/assets/teams/chelsea.png',
+        kickoff: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 18, 0),
+        status: 'upcoming',
+        odds: {
+          home: 2.25,
+          draw: 3.60,
+          away: 2.90
+        }
+      },
+      {
+        id: 'demo-3',
+        leagueId: 'demo-league-2',
+        homeTeam: 'Real Madrid',
+        awayTeam: 'Barcelona',
+        homeTeamLogo: '/assets/teams/real-madrid.png',
+        awayTeamLogo: '/assets/teams/barcelona.png',
+        kickoff: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 21, 0),
+        status: 'upcoming',
+        odds: {
+          home: 2.40,
+          draw: 3.20,
+          away: 2.80
+        }
+      },
+      {
+        id: 'demo-4',
+        leagueId: 'demo-league-3',
+        homeTeam: 'Bayern Munich',
+        awayTeam: 'Borussia Dortmund',
+        homeTeamLogo: '/assets/teams/bayern.png',
+        awayTeamLogo: '/assets/teams/dortmund.png',
+        kickoff: new Date(dayAfter.getFullYear(), dayAfter.getMonth(), dayAfter.getDate(), 16, 30),
+        status: 'upcoming',
+        odds: {
+          home: 1.90,
+          draw: 3.50,
+          away: 3.80
+        }
+      }
+    ];
+  }
+
+  /**
+   * Generate demo live matches for betting when API has none
+   */
+  private generateLiveMatches(): DashboardMatch[] {
+    return [
+      {
+        id: 'live-demo-1',
+        leagueId: 'demo-league-1',
+        homeTeam: 'Tottenham',
+        awayTeam: 'Manchester United',
+        homeTeamLogo: '/assets/teams/tottenham.png',
+        awayTeamLogo: '/assets/teams/man-utd.png',
+        kickoff: new Date(Date.now() - 45 * 60 * 1000), // Started 45 minutes ago
+        status: 'live',
+        homeScore: 1,
+        awayScore: 0,
+        odds: {
+          home: 3.10,
+          draw: 3.30,
+          away: 2.20
+        },
+        liveData: {
+          minute: 67,
+          possession: { home: 58, away: 42 }
+        }
+      },
+      {
+        id: 'live-demo-2',
+        leagueId: 'demo-league-2',
+        homeTeam: 'Atletico Madrid',
+        awayTeam: 'Valencia',
+        homeTeamLogo: '/assets/teams/atletico.png',
+        awayTeamLogo: '/assets/teams/valencia.png',
+        kickoff: new Date(Date.now() - 25 * 60 * 1000), // Started 25 minutes ago
+        status: 'live',
+        homeScore: 2,
+        awayScore: 1,
+        odds: {
+          home: 1.85,
+          draw: 3.80,
+          away: 4.20
+        },
+        liveData: {
+          minute: 38,
+          possession: { home: 65, away: 35 }
+        }
+      }
+    ];
   }
 }
