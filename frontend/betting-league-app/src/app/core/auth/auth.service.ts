@@ -236,12 +236,15 @@ export class AuthService {
    * Refresh access token
    */
   refreshToken(): Observable<TokenResponse> {
+    console.log('AuthService: Attempting token refresh...');
     const refreshToken = this.getRefreshToken();
     
     if (!refreshToken) {
+      console.error('AuthService: No refresh token available');
       return throwError(() => 'No refresh token available');
     }
 
+    console.log('AuthService: Found refresh token, making request to Keycloak');
     const body = new URLSearchParams({
       grant_type: 'refresh_token',
       client_id: environment.keycloak.clientId,
@@ -257,12 +260,15 @@ export class AuthService {
       body.toString(),
       { headers }
     ).pipe(
-      map((response: any) => ({
-        access_token: response.access_token,
-        refresh_token: response.refresh_token,
-        expires_in: response.expires_in,
-        token_type: response.token_type
-      })),
+      map((response: any) => {
+        console.log('AuthService: Token refresh successful');
+        return {
+          access_token: response.access_token,
+          refresh_token: response.refresh_token,
+          expires_in: response.expires_in,
+          token_type: response.token_type
+        };
+      }),
       tap((tokenResponse) => {
         this.storeTokens(tokenResponse);
       }),

@@ -20,6 +20,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { DashboardService, DashboardMatch, DashboardBet, DashboardStats, DashboardLeague } from '../../core/services/dashboard.service';
 import { BetDialogComponent, BetDialogData, BetPlacementResult } from '../betting/bet-dialog/bet-dialog.component';
 import { Subscription } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 // Use interfaces from dashboard service
 interface League extends DashboardLeague {}
@@ -313,11 +314,11 @@ interface Bet extends DashboardBet {}
               </div>
             </mat-tab>
 
-            <!-- My Bets Tab -->
+            <!-- My Predictions Tab -->
             <mat-tab>
               <ng-template mat-tab-label>
                 <mat-icon>receipt</mat-icon>
-                My Bets
+                My Predictions
                 <mat-chip *ngIf="userBets.length > 0" [matBadge]="userBets.length" matBadgePosition="after">
                   {{ userBets.length }}
                 </mat-chip>
@@ -326,8 +327,8 @@ interface Bet extends DashboardBet {}
               <div class="tab-content">
                 <div *ngIf="userBets.length === 0" class="no-data">
                   <mat-icon>receipt</mat-icon>
-                  <h3>No bets placed yet</h3>
-                  <p>Start betting on your favorite matches!</p>
+                  <h3>No predictions made yet</h3>
+                  <p>Start making predictions on your favorite matches!</p>
                   <button mat-raised-button color="primary" (click)="navigateToMatches()">
                     <mat-icon>sports</mat-icon>
                     Browse Matches
@@ -418,12 +419,12 @@ interface Bet extends DashboardBet {}
             </mat-card-header>
             <mat-card-content>
               <div class="stat-row">
-                <span class="stat-label">Total Bets</span>
+                <span class="stat-label">Total Predictions</span>
                 <span class="stat-value">{{ userStats.totalBets }}</span>
               </div>
               <mat-divider></mat-divider>
               <div class="stat-row">
-                <span class="stat-label">Active Bets</span>
+                <span class="stat-label">Active Predictions</span>
                 <span class="stat-value">{{ userStats.activeBets }}</span>
               </div>
               <mat-divider></mat-divider>
@@ -1511,8 +1512,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async placeBet(match: Match, prediction: 'home' | 'draw' | 'away'): Promise<void> {
     try {
+      // Check if user is authenticated before proceeding
+      const accessToken = this.authService.getAccessToken();
+      if (!accessToken) {
+        console.error('No access token available for prediction submission');
+        this.showError('Authentication expired. Please refresh the page and try again.');
+        return;
+      }
+
       console.log('Making prediction for:', { match, prediction });
       console.log('Match odds:', match.odds);
+      console.log('User authenticated with token:', accessToken ? 'Present' : 'Missing');
 
       // Create dialog data
       const dialogData: BetDialogData = {
@@ -1568,7 +1578,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
             },
             error: (error) => {
               console.error('Error placing prediction:', error);
-              this.showError('Failed to submit prediction. Please try again.');
+              console.error('Full error details:', {
+                status: error.status,
+                statusText: error.statusText,
+                message: error.message,
+                error: error.error
+              });
+              
+              // Check if it's an authentication error
+              if (error.status === 401) {
+                this.showError('Authentication expired. Please refresh the page and try again.');
+              } else if (error.status === 403) {
+                this.showError('You do not have permission to make predictions.');
+              } else if (error.status === 0) {
+                this.showError('Cannot connect to server. Please check your internet connection.');
+              } else {
+                this.showError(`Failed to submit prediction: ${error.message || 'Unknown error'}`);
+              }
             }
           });
         }
