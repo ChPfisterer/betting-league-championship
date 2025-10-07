@@ -13,6 +13,8 @@ export interface DashboardMatch {
   awayTeamLogo: string;
   kickoff: Date;
   status: 'upcoming' | 'live' | 'finished';
+  stage?: string; // e.g., "Group Stage", "Round of 16", "Quarter-final", "Semi-final", "Final"
+  match_type?: string; // Original match type from API
   homeScore?: number;
   awayScore?: number;
   odds: {
@@ -212,10 +214,12 @@ export class DashboardService {
       awayTeam: match.away_team?.name || 'Unknown Team',
       homeTeamLogo: match.home_team?.logo_url || this.getDefaultTeamLogo(match.home_team?.country),
       awayTeamLogo: match.away_team?.logo_url || this.getDefaultTeamLogo(match.away_team?.country),
-      kickoff: new Date(match.match_date),
+      kickoff: new Date(match.scheduled_at || match.match_date || new Date()),
       status: this.mapMatchStatus(match.status),
+      stage: this.determineMatchStage(match),
       homeScore: match.home_score,
       awayScore: match.away_score,
+      match_type: match.match_type,
       odds: this.generateOdds(match), // TODO: Get real odds from API
       liveData: match.status === 'live' ? this.generateLiveData() : undefined
     };
@@ -258,6 +262,51 @@ export class DashboardService {
   }
 
   /**
+   * Determine match stage/phase based on round number and match type
+   */
+  private determineMatchStage(match: Match): string {
+    const roundNumber = match.round_number || 1;
+    const matchType = match.match_type || 'regular';
+    
+    // For World Cup and knockout tournaments
+    if (matchType === 'final') {
+      return 'Final';
+    } else if (matchType === 'semifinal') {
+      return 'Semi-final';
+    } else if (matchType === 'quarterfinal') {
+      return 'Quarter-final';
+    } else if (matchType === 'playoff') {
+      // Determine playoff stage based on round number
+      switch (roundNumber) {
+        case 2: return 'Round of 16';
+        case 3: return 'Quarter-final';
+        case 4: return 'Semi-final';
+        case 5: return '3rd Place Play-off';
+        case 6: return 'Final';
+        default: return 'Playoff Round';
+      }
+    } else {
+      // For regular matches, determine stage based on round patterns
+      if (roundNumber === 1) {
+        return 'Group Stage';
+      } else if (roundNumber === 2 && matchType === 'regular') {
+        return 'Round of 16';
+      } else if (roundNumber === 3) {
+        return 'Quarter-final';
+      } else if (roundNumber === 4) {
+        return 'Semi-final';
+      } else if (roundNumber === 5) {
+        return '3rd Place Play-off';
+      } else if (roundNumber === 6) {
+        return 'Final';
+      } else {
+        // For regular league games
+        return `Matchday ${roundNumber}`;
+      }
+    }
+  }
+
+  /**
    * Map API match status to dashboard status
    */
   private mapMatchStatus(status: string): 'upcoming' | 'live' | 'finished' {
@@ -265,6 +314,7 @@ export class DashboardService {
       case 'scheduled': return 'upcoming';
       case 'live': return 'live';
       case 'completed': return 'finished';
+      case 'finished': return 'finished';
       default: return 'upcoming';
     }
   }

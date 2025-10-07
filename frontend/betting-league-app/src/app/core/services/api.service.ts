@@ -48,12 +48,15 @@ export interface Match {
   competition_id: string;
   home_team_id: string;
   away_team_id: string;
-  match_date: string;
-  status: 'scheduled' | 'live' | 'completed' | 'postponed' | 'cancelled';
+  match_date?: string; // For compatibility
+  scheduled_at: string; // Actual API field
+  status: 'scheduled' | 'live' | 'completed' | 'finished' | 'postponed' | 'cancelled';
   home_score?: number;
   away_score?: number;
   venue?: string;
   round?: string;
+  round_number?: number;
+  match_type?: 'regular' | 'playoff' | 'final' | 'semifinal' | 'quarterfinal' | 'friendly' | 'qualifier';
   competition?: Competition;
   home_team?: Team;
   away_team?: Team;
@@ -234,9 +237,28 @@ export class ApiService {
 
   // Utility methods for dashboard
   getMatchesByStatus(status: 'live' | 'scheduled' | 'finished'): Observable<Match[]> {
-    return this.matches$.pipe(
-      map(matches => matches.filter(match => match.status === status))
-    );
+    // Make direct API call with status filter to get fresh data with team details
+    let httpParams = new HttpParams();
+    httpParams = httpParams.set('status', status);
+    httpParams = httpParams.set('limit', '100'); // Increased to get all matches (64 FIFA World Cup matches)
+    
+    return this.http.get<Match[]>(`${this.baseUrl}/api/v1/matches/`, { params: httpParams });
+  }
+
+  /**
+   * Get matches with pagination support
+   */
+  getMatchesByStatusPaginated(
+    status: 'live' | 'scheduled' | 'finished',
+    skip: number = 0,
+    limit: number = 100
+  ): Observable<Match[]> {
+    let httpParams = new HttpParams();
+    httpParams = httpParams.set('status', status);
+    httpParams = httpParams.set('skip', skip.toString());
+    httpParams = httpParams.set('limit', limit.toString());
+    
+    return this.http.get<Match[]>(`${this.baseUrl}/api/v1/matches/`, { params: httpParams });
   }
 
   getActiveBets(): Observable<Bet[]> {
@@ -255,6 +277,23 @@ export class ApiService {
         return liveUpdate || match;
       });
       this.matchesSubject.next(updatedMatches);
+    });
+  }
+
+  // User registration
+  register(userData: {
+    firstName: string;
+    lastName: string;
+    username: string;
+    email: string;
+    password: string;
+  }): Observable<any> {
+    return this.http.post(`${this.baseUrl}/auth/register`, {
+      first_name: userData.firstName,
+      last_name: userData.lastName,
+      username: userData.username,
+      email: userData.email,
+      password: userData.password
     });
   }
 }

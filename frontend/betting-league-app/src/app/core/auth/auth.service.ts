@@ -81,6 +81,31 @@ export class AuthService {
   }
 
   /**
+   * Initiate Keycloak OAuth flow
+   */
+  initiateKeycloakLogin(): void {
+    this.login();
+  }
+
+  /**
+   * Initiate Keycloak registration flow
+   */
+  initiateKeycloakRegistration(): void {
+    this.getAuthorizationUrl().subscribe({
+      next: (response) => {
+        // Add registration parameter to redirect to Keycloak registration page
+        const registrationUrl = response.authorize_url.replace('/auth?', '/registrations?');
+        window.location.href = registrationUrl;
+      },
+      error: (error) => {
+        console.error('Failed to get registration URL:', error);
+        // Fallback to regular login flow
+        this.login();
+      }
+    });
+  }
+
+  /**
    * Handle OAuth callback
    */
   handleCallback(code: string, state: string): Observable<User> {
@@ -103,30 +128,108 @@ export class AuthService {
   }
 
   /**
-   * Logout user
+   * Logout user from both application and Keycloak - FORCE complete logout
    */
   logout(): Observable<any> {
-    const refreshToken = this.getRefreshToken();
+    console.log('AuthService: Starting COMPLETE logout...');
     
-    if (refreshToken) {
-      return this.http.post(`${this.API_URL}/auth/keycloak/oauth/logout`, {
-        refresh_token: refreshToken
-      }).pipe(
-        tap(() => {
-          this.performLogout();
-        }),
-        catchError(() => {
-          this.performLogout();
-          return throwError(() => 'Logout failed');
-        })
-      );
-    } else {
-      this.performLogout();
-      return new Observable(observer => {
-        observer.next(null);
-        observer.complete();
-      });
+    // Always perform local cleanup first
+    this.performLogout();
+    
+    // ALWAYS redirect to Keycloak logout to ensure SSO session ends
+    // This is the only way to guarantee complete logout from Keycloak
+    this.forceKeycloakLogout();
+    
+    return new Observable(observer => {
+      observer.next(null);
+      observer.complete();
+    });
+  }
+
+  /**
+   * Force complete Keycloak logout that ends SSO session
+   */
+  private forceKeycloakLogout(): void {
+    const keycloakLogoutUrl = `${environment.keycloak.url}/realms/${environment.keycloak.realm}/protocol/openid-connect/logout`;
+    const redirectUri = `${window.location.origin}/login`;
+    
+    // Get access token to use as hint
+    const accessToken = this.getAccessToken();
+    
+    // Build logout URL with parameters for ending SSO session
+    const params = new URLSearchParams({
+      'client_id': environment.keycloak.clientId,
+      'post_logout_redirect_uri': redirectUri
+    });
+    
+    // Add session_state and id_token_hint if available to help Keycloak identify session
+    if (accessToken) {
+      // Use access token as hint (Keycloak may accept this)
+      params.append('id_token_hint', accessToken);
     }
+    
+    // Add additional parameter to help ensure complete logout
+    params.append('logout', 'true');
+    
+    const logoutUrl = `${keycloakLogoutUrl}?${params.toString()}`;
+    
+    console.log('AuthService: Forcing complete Keycloak SSO logout:', logoutUrl);
+    
+    // Clear any Keycloak-related cookies before redirect
+    this.clearKeycloakCookies();
+    
+    // Redirect to Keycloak logout
+    window.location.href = logoutUrl;
+  }
+
+  /**
+   * Clear Keycloak-related cookies to help ensure clean logout
+   */
+  private clearKeycloakCookies(): void {
+    // Clear common Keycloak session cookies
+    const cookiesToClear = [
+      'KEYCLOAK_SESSION',
+      'KEYCLOAK_SESSION_LEGACY',
+      'KEYCLOAK_IDENTITY',
+      'KEYCLOAK_IDENTITY_LEGACY',
+      'AUTH_SESSION_ID',
+      'AUTH_SESSION_ID_LEGACY'
+    ];
+    
+    cookiesToClear.forEach(cookieName => {
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}`;
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${window.location.hostname}`;
+    });
+  }
+
+  /**
+   * Redirect to Keycloak logout endpoint with maximum automation
+   */
+  private logoutFromKeycloak(): void {
+    const keycloakLogoutUrl = `${environment.keycloak.url}/realms/${environment.keycloak.realm}/protocol/openid-connect/logout`;
+    const redirectUri = `${window.location.origin}/login`;
+    
+    // Get the access token for logout hint
+    const accessToken = this.getAccessToken();
+    
+    // Build logout URL with parameters for maximum automation
+    const params = new URLSearchParams({
+      'client_id': environment.keycloak.clientId,
+      'post_logout_redirect_uri': redirectUri,
+      'redirect_uri': redirectUri  // Some Keycloak versions prefer this
+    });
+    
+    // Add token hint if available for automatic logout
+    if (accessToken) {
+      params.append('id_token_hint', accessToken);
+    }
+    
+    const logoutUrl = `${keycloakLogoutUrl}?${params.toString()}`;
+    
+    console.log('AuthService: Redirecting to Keycloak logout (should be automatic):', logoutUrl);
+    
+    // Redirect to Keycloak logout
+    window.location.href = logoutUrl;
   }
 
   /**
@@ -326,11 +429,13 @@ export class AuthService {
   }
 
   private performLogout(): void {
+    console.log('AuthService: Performing logout cleanup...');
     this.clearTokens();
     this.clearAuthState();
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
-    this.router.navigate(['/']);
+    console.log('AuthService: Logout cleanup complete');
+    // Note: Navigation is handled by the calling component
   }
 
   private storeTokens(tokenResponse: TokenResponse): void {

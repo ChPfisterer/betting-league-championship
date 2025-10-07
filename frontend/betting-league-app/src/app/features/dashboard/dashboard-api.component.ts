@@ -11,6 +11,10 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatMenuModule } from '@angular/material/menu';
+import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { DashboardService, DashboardMatch, DashboardBet, DashboardStats, DashboardLeague } from '../../core/services/dashboard.service';
 import { Subscription } from 'rxjs';
@@ -36,7 +40,10 @@ interface Bet extends DashboardBet {}
     MatDividerModule,
     MatTooltipModule,
     MatSnackBarModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatExpansionModule,
+    MatToolbarModule,
+    MatMenuModule
   ],
   template: `
     <div class="dashboard-container">
@@ -90,16 +97,22 @@ interface Bet extends DashboardBet {}
               
               <div class="tab-content">
                 <div *ngIf="liveMatches.length === 0" class="no-data">
-                  <mat-icon>sports</mat-icon>
-                  <h3>No live matches at the moment</h3>
-                  <p>Check back later or browse upcoming matches</p>
+                  <mat-icon>sports_soccer</mat-icon>
+                  <h3>No live matches</h3>
+                  <p>Matches currently being played will appear here</p>
                 </div>
                 
-                <div *ngIf="liveMatches.length > 0" class="matches-grid">
+                <!-- Debug info -->
+                <div *ngIf="liveMatches.length > 0" style="padding: 10px; background: #ffebee; margin-bottom: 10px; border-radius: 4px;">
+                  <small>🔴 {{ liveMatches.length }} live matches (sorted by date - most recent first)</small>
+                </div>                <div *ngIf="liveMatches.length > 0" class="matches-grid">
                   <mat-card *ngFor="let match of liveMatches" class="match-card live-match">
                     <mat-card-header>
                       <div class="match-header">
-                        <span class="league-name">{{ getLeagueName(match.leagueId) }}</span>
+                        <div class="league-info">
+                          <span class="league-name">{{ getLeagueName(match.leagueId) }}</span>
+                          <span *ngIf="match.stage" class="match-stage">{{ match.stage }}</span>
+                        </div>
                         <mat-chip color="accent">
                           <mat-icon>live_tv</mat-icon>
                           LIVE {{ match.liveData?.minute }}'
@@ -169,15 +182,22 @@ interface Bet extends DashboardBet {}
                 <div *ngIf="upcomingMatches.length === 0" class="no-data">
                   <mat-icon>schedule</mat-icon>
                   <h3>No upcoming matches</h3>
-                  <p>New matches will appear here when scheduled</p>
+                  <p>Scheduled matches will appear here</p>
                 </div>
                 
+                <!-- Debug info -->
+                <div *ngIf="upcomingMatches.length > 0" style="padding: 10px; background: #e3f2fd; margin-bottom: 10px; border-radius: 4px;">
+                  <small>📅 {{ upcomingMatches.length }} upcoming matches (sorted by date - earliest first)</small>
+                </div>                <!-- Simple grid for upcoming matches -->
                 <div *ngIf="upcomingMatches.length > 0" class="matches-grid">
                   <mat-card *ngFor="let match of upcomingMatches" class="match-card">
                     <mat-card-header>
                       <div class="match-header">
-                        <span class="league-name">{{ getLeagueName(match.leagueId) }}</span>
-                        <span class="kickoff-time">{{ match.kickoff | date:'short' }}</span>
+                        <div class="league-info">
+                          <span class="league-name">{{ getLeagueName(match.leagueId) }}</span>
+                          <span *ngIf="match.stage" class="match-stage">{{ match.stage }}</span>
+                        </div>
+                        <span class="kickoff-time">{{ match.kickoff | date:'MMM d, h:mm a' }}</span>
                       </div>
                     </mat-card-header>
                     
@@ -231,34 +251,61 @@ interface Bet extends DashboardBet {}
                   <p>Completed matches will appear here</p>
                 </div>
                 
-                <div *ngIf="recentMatches.length > 0" class="matches-grid">
-                  <mat-card *ngFor="let match of recentMatches" class="match-card finished-match">
-                    <mat-card-header>
-                      <div class="match-header">
-                        <span class="league-name">{{ getLeagueName(match.leagueId) }}</span>
-                        <span class="match-status finished">{{ match.status | titlecase }}</span>
-                      </div>
-                    </mat-card-header>
-                    <mat-card-content>
-                      <div class="match-teams">
-                        <div class="team">
-                          <img [src]="match.homeTeamLogo" alt="{{ match.homeTeam }}" class="team-logo" />
-                          <span class="team-name">{{ match.homeTeam }}</span>
-                          <span class="team-score">{{ match.homeScore || 0 }}</span>
-                        </div>
-                        <div class="vs-divider">-</div>
-                        <div class="team">
-                          <span class="team-score">{{ match.awayScore || 0 }}</span>
-                          <span class="team-name">{{ match.awayTeam }}</span>
-                          <img [src]="match.awayTeamLogo" alt="{{ match.awayTeam }}" class="team-logo" />
-                        </div>
-                      </div>
+                <!-- Debug info -->
+                <div *ngIf="recentMatches.length > 0" style="padding: 10px; background: #e8f5e8; margin-bottom: 10px; border-radius: 4px;">
+                  <small>✅ Found {{ recentMatches.length }} recent matches - {{ getGroupedMatches(recentMatches).length }} stage groups (sorted by date)</small>
+                </div>
+                
+                <!-- Grouped matches by stage -->
+                <div *ngIf="recentMatches.length > 0" class="grouped-matches">
+                  <mat-accordion class="stage-accordion">
+                    <mat-expansion-panel *ngFor="let group of getGroupedMatches(recentMatches); trackBy: trackByStage" 
+                                       [expanded]="group.stage === 'Final' || group.stage === 'Semi-final'"
+                                       class="stage-panel">
+                      <mat-expansion-panel-header>
+                        <mat-panel-title>
+                          <mat-icon [class]="'stage-icon ' + getStageColor(group.stage)">{{ getStageIcon(group.stage) }}</mat-icon>
+                          {{ group.stage }}
+                        </mat-panel-title>
+                        <mat-panel-description>
+                          {{ group.count }} {{ group.count === 1 ? 'match' : 'matches' }}
+                        </mat-panel-description>
+                      </mat-expansion-panel-header>
                       
-                      <div class="match-result">
-                        <span class="final-score">Final Score: {{ match.homeScore || 0 }} - {{ match.awayScore || 0 }}</span>
+                      <div class="matches-grid">
+                        <mat-card *ngFor="let match of group.matches; trackBy: trackByMatch" class="match-card finished-match">
+                          <mat-card-header>
+                            <div class="match-header">
+                              <div class="league-info">
+                                <span class="league-name">{{ getLeagueName(match.leagueId) }}</span>
+                                <span class="match-date">{{ match.kickoff | date:'MMM d, h:mm a' }}</span>
+                              </div>
+                              <span class="match-status finished">{{ match.status | titlecase }}</span>
+                            </div>
+                          </mat-card-header>
+                          <mat-card-content>
+                            <div class="match-teams">
+                              <div class="team">
+                                <img [src]="match.homeTeamLogo" alt="{{ match.homeTeam }}" class="team-logo" />
+                                <span class="team-name">{{ match.homeTeam }}</span>
+                                <span class="team-score">{{ match.homeScore || 0 }}</span>
+                              </div>
+                              <div class="vs-divider">-</div>
+                              <div class="team">
+                                <span class="team-score">{{ match.awayScore || 0 }}</span>
+                                <span class="team-name">{{ match.awayTeam }}</span>
+                                <img [src]="match.awayTeamLogo" alt="{{ match.awayTeam }}" class="team-logo" />
+                              </div>
+                            </div>
+                            
+                            <div class="match-result">
+                              <span class="final-score">Final: {{ match.homeScore || 0 }} - {{ match.awayScore || 0 }}</span>
+                            </div>
+                          </mat-card-content>
+                        </mat-card>
                       </div>
-                    </mat-card-content>
-                  </mat-card>
+                    </mat-expansion-panel>
+                  </mat-accordion>
                 </div>
               </div>
             </mat-tab>
@@ -438,8 +485,101 @@ interface Bet extends DashboardBet {}
     </div>
   `,
   styles: [`
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1100;  /* Higher than app-header (1000) */
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .nav-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-logo {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+
+    .nav-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-greeting {
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .user-menu-trigger {
+      color: white;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    .user-avatar {
+      background-color: #f0f0f0;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .user-avatar mat-icon {
+      color: #666;
+      font-size: 24px;
+    }
+
+    .user-details {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-name {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .user-email {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .logout-button {
+      color: #f44336;
+    }
+
     .dashboard-container {
-      padding: 20px;
+      padding: 84px 20px 20px 20px; /* Account for fixed nav */
       max-width: 1400px;
       margin: 0 auto;
       background: #f5f5f5;
@@ -551,6 +691,72 @@ interface Bet extends DashboardBet {}
       font-weight: 500;
     }
 
+    /* Stage Grouping Styles */
+    .grouped-matches {
+      max-width: 100%;
+    }
+
+    .stage-accordion {
+      width: 100%;
+    }
+
+    .stage-panel {
+      margin-bottom: 16px !important;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px !important;
+      overflow: hidden;
+    }
+
+    .stage-panel .mat-expansion-panel-header {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .stage-panel .mat-expansion-panel-header:hover {
+      background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+    }
+
+    .stage-icon {
+      margin-right: 12px !important;
+      font-size: 20px !important;
+      width: 20px !important;
+      height: 20px !important;
+    }
+
+    .stage-icon.gold { color: #ffd700; }
+    .stage-icon.silver { color: #c0c0c0; }
+    .stage-icon.bronze { color: #cd7f32; }
+    .stage-icon.primary { color: #1976d2; }
+    .stage-icon.accent { color: #7b1fa2; }
+    .stage-icon.basic { color: #666; }
+    
+    /* Group-specific colors */
+    .stage-icon.green { color: #4caf50; }
+    .stage-icon.blue { color: #2196f3; }
+    .stage-icon.purple { color: #9c27b0; }
+    .stage-icon.orange { color: #ff9800; }
+    .stage-icon.teal { color: #009688; }
+    .stage-icon.pink { color: #e91e63; }
+    .stage-icon.brown { color: #795548; }
+    .stage-icon.indigo { color: #3f51b5; }
+
+    .stage-panel .mat-expansion-panel-body {
+      padding: 0 !important;
+    }
+
+    .stage-panel .matches-grid {
+      padding: 20px;
+      margin: 0;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    }
+
+    .match-date {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 2px;
+    }
+
     .match-result {
       text-align: center;
       margin-top: 16px;
@@ -578,9 +784,26 @@ interface Bet extends DashboardBet {}
       width: 100%;
     }
 
+    .league-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
     .league-name {
       font-size: 0.9rem;
       color: #666;
+    }
+
+    .match-stage {
+      font-size: 0.8rem;
+      color: #1976d2;
+      font-weight: 500;
+      background: rgba(25, 118, 210, 0.1);
+      padding: 2px 6px;
+      border-radius: 8px;
+      display: inline-block;
+      max-width: fit-content;
     }
 
     .kickoff-time {
@@ -931,7 +1154,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private dashboardService: DashboardService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private router: Router
   ) {
     this.currentUser = this.authService.getCurrentUser();
   }
@@ -963,7 +1187,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.dashboardService.getLiveMatches().subscribe({
         next: (matches) => {
-          this.liveMatches = matches;
+          // Sort live matches by date (most recent first)
+          this.liveMatches = matches.sort((a, b) => 
+            new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime()
+          );
         },
         error: (error) => {
           console.error('Error loading live matches:', error);
@@ -976,7 +1203,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.dashboardService.getUpcomingMatches().subscribe({
         next: (matches) => {
-          this.upcomingMatches = matches;
+          // Sort upcoming matches by date (earliest first)
+          this.upcomingMatches = matches.sort((a, b) => 
+            new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime()
+          );
         },
         error: (error) => {
           console.error('Error loading upcoming matches:', error);
@@ -989,7 +1219,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.dashboardService.getRecentMatches().subscribe({
         next: (matches) => {
-          this.recentMatches = matches;
+          // Sort recent matches by date (most recent first) before grouping
+          this.recentMatches = matches.sort((a, b) => 
+            new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime()
+          );
         },
         error: (error) => {
           console.error('Error loading recent matches:', error);
@@ -1090,6 +1323,168 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Group matches by stage for better organization
+   */
+  getGroupedMatches(matches: DashboardMatch[]): { stage: string; matches: DashboardMatch[]; count: number }[] {
+    const grouped = new Map<string, DashboardMatch[]>();
+    
+    matches.forEach(match => {
+      let stage = match.stage || 'Group Stage';
+      
+      // For Group Stage matches, further group by teams to simulate World Cup groups
+      if (stage === 'Group Stage' || match.match_type === 'regular') {
+        const groupLetter = this.getWorldCupGroup(match.homeTeam, match.awayTeam);
+        stage = `Group ${groupLetter}`;
+      }
+      
+      if (!grouped.has(stage)) {
+        grouped.set(stage, []);
+      }
+      grouped.get(stage)!.push(match);
+    });
+
+    // Define stage order for tournaments (World Cup style)
+    const stageOrder = [
+      'Final',
+      'Third-place play-off', 
+      'Semi-final',
+      'Quarter-final',
+      'Round of 16',
+      // Group stages will be added dynamically
+    ];
+
+    // Add group stages in alphabetical order
+    const groupStages = Array.from(grouped.keys())
+      .filter(stage => stage.startsWith('Group '))
+      .sort();
+    
+    const allStageOrder = [...stageOrder, ...groupStages, 'Other'];
+
+    // Convert to array and sort by stage importance
+    const result = Array.from(grouped.entries()).map(([stage, matches]) => ({
+      stage,
+      matches: matches.sort((a, b) => {
+        // First, sort by status priority: live > upcoming > finished
+        const statusPriority = { 'live': 3, 'upcoming': 2, 'finished': 1 };
+        const statusA = statusPriority[a.status] || 0;
+        const statusB = statusPriority[b.status] || 0;
+        
+        if (statusA !== statusB) {
+          return statusB - statusA; // Higher priority first
+        }
+        
+        // Within same status, sort by date
+        const dateA = new Date(a.kickoff).getTime();
+        const dateB = new Date(b.kickoff).getTime();
+        
+        if (a.status === 'upcoming') {
+          // For upcoming matches: earliest first
+          return dateA - dateB;
+        } else {
+          // For finished/live matches: most recent first
+          return dateB - dateA;
+        }
+      }),
+      count: matches.length
+    }));
+
+    // Sort by stage order (Final first, Group Stage last)
+    result.sort((a, b) => {
+      const indexA = allStageOrder.indexOf(a.stage);
+      const indexB = allStageOrder.indexOf(b.stage);
+      const orderA = indexA === -1 ? allStageOrder.length : indexA;
+      const orderB = indexB === -1 ? allStageOrder.length : indexB;
+      return orderA - orderB;
+    });
+
+    return result;
+  }
+
+  /**
+   * Simulate World Cup groups based on team combinations
+   * This creates realistic groupings for the FIFA World Cup data
+   */
+  private getWorldCupGroup(homeTeam: string, awayTeam: string): string {
+    // Define World Cup 2022 groups based on actual tournament
+    const worldCupGroups = {
+      'A': ['Qatar', 'Ecuador', 'Senegal', 'Netherlands'],
+      'B': ['England', 'Iran', 'USA', 'Wales'],
+      'C': ['Argentina', 'Saudi Arabia', 'Mexico', 'Poland'],
+      'D': ['France', 'Australia', 'Denmark', 'Tunisia'],
+      'E': ['Spain', 'Costa Rica', 'Germany', 'Japan'],
+      'F': ['Belgium', 'Canada', 'Morocco', 'Croatia'],
+      'G': ['Brazil', 'Serbia', 'Switzerland', 'Cameroon'],
+      'H': ['Portugal', 'Ghana', 'Uruguay', 'South Korea']
+    };
+
+    // Find which group both teams belong to
+    for (const [groupLetter, teams] of Object.entries(worldCupGroups)) {
+      if (teams.includes(homeTeam) && teams.includes(awayTeam)) {
+        return groupLetter;
+      }
+    }
+
+    // If no exact match found, use first letter of home team for consistent grouping
+    const firstLetter = homeTeam.charAt(0).toUpperCase();
+    const groupIndex = Math.max(0, firstLetter.charCodeAt(0) - 65) % 8; // A-H
+    return String.fromCharCode(65 + groupIndex); // Convert back to A-H
+  }
+
+  /**
+   * Get stage icon for display
+   */
+  getStageIcon(stage: string): string {
+    switch (stage) {
+      case 'Final': return 'emoji_events';
+      case '3rd Place Play-off': return 'bronze';
+      case 'Semi-final': return 'military_tech';
+      case 'Quarter-final': return 'shield';
+      case 'Round of 16': return 'sports';
+      case 'Group Stage': return 'groups';
+      default: 
+        // Handle Group A, B, C, etc.
+        if (stage.startsWith('Group ')) {
+          return 'group_work';
+        }
+        return 'sports_soccer';
+    }
+  }
+
+  /**
+   * Get stage color theme
+   */
+  getStageColor(stage: string): string {
+    switch (stage) {
+      case 'Final': return 'gold';
+      case '3rd Place Play-off': return 'bronze';
+      case 'Semi-final': return 'silver';
+      case 'Quarter-final': return 'primary';
+      case 'Round of 16': return 'accent';
+      case 'Group Stage': return 'basic';
+      default:
+        // Handle Group A, B, C, etc. with different colors
+        if (stage.startsWith('Group ')) {
+          const groupLetter = stage.split(' ')[1];
+          const colors = ['green', 'blue', 'purple', 'orange', 'teal', 'pink', 'brown', 'indigo'];
+          const colorIndex = (groupLetter.charCodeAt(0) - 65) % colors.length;
+          return colors[colorIndex];
+        }
+        return 'basic';
+    }
+  }
+
+  /**
+   * TrackBy functions for better performance
+   */
+  trackByStage(index: number, item: { stage: string; matches: DashboardMatch[]; count: number }): string {
+    return item.stage;
+  }
+
+  trackByMatch(index: number, item: DashboardMatch): string {
+    return `${item.homeTeam}-${item.awayTeam}-${item.kickoff}`;
+  }
+
   getRankProgressValue(): number {
     if (this.userStats.totalUsers === 0) return 0;
     // Calculate progress from bottom to current rank
@@ -1139,6 +1534,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // This would navigate to matches page in a real app
     this.snackBar.open('Navigate to matches page', 'Close', {
       duration: 3000
+    });
+  }
+
+  // Navigation methods
+  viewProfile(): void {
+    this.router.navigate(['/profile']);
+  }
+
+  viewBettingHistory(): void {
+    this.snackBar.open('Betting history page coming soon!', 'Close', {
+      duration: 3000
+    });
+    // TODO: Navigate to betting history
+    // this.router.navigate(['/bets']);
+  }
+
+  viewSettings(): void {
+    this.snackBar.open('Settings page coming soon!', 'Close', {
+      duration: 3000
+    });
+    // TODO: Navigate to settings
+    // this.router.navigate(['/settings']);
+  }
+
+  logout(): void {
+    this.authService.logout().subscribe({
+      next: () => {
+        this.snackBar.open('Successfully logged out', 'Close', {
+          duration: 3000
+        });
+        this.router.navigate(['/login']);
+      },
+      error: (error) => {
+        console.error('Logout error:', error);
+        // Even if logout API fails, clear local session
+        this.router.navigate(['/login']);
+      }
     });
   }
 }
