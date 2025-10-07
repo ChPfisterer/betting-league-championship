@@ -168,9 +168,8 @@ export interface BetPlacementResult {
                   max="100" 
                   step="1" 
                   discrete
-                  [value]="betForm.get('stake')?.value || 1"
                   (input)="onSliderChange($event)">
-                  <input matSliderThumb>
+                  <input matSliderThumb [value]="betForm.get('stake')?.value || 1">
                 </mat-slider>
               </div>
             </form>

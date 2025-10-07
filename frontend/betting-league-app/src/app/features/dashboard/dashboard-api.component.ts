@@ -1278,8 +1278,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private async loadDashboardData(): Promise<void> {
     this.isLoading = true;
     try {
+      console.log('Loading dashboard data...');
       await this.dashboardService.loadDashboardData();
+      
+      // Log the loaded data for debugging
+      this.dashboardService.getLiveMatches().subscribe((matches: DashboardMatch[]) => {
+        console.log('Loaded live matches:', matches);
+        console.log('Sample live match odds:', matches[0]?.odds);
+      });
+      
+      this.dashboardService.getUpcomingMatches().subscribe((matches: DashboardMatch[]) => {
+        console.log('Loaded upcoming matches:', matches);
+        console.log('Sample upcoming match odds:', matches[0]?.odds);
+      });
+      
       this.isLoading = false;
+      console.log('Dashboard data loaded successfully');
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       this.showError('Failed to load dashboard data');
@@ -1497,6 +1511,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async placeBet(match: Match, prediction: 'home' | 'draw' | 'away'): Promise<void> {
     try {
+      console.log('PlaceBet called with:', { match, prediction });
+      console.log('Match odds:', match.odds);
+
       // Create dialog data
       const dialogData: BetDialogData = {
         match: {
@@ -1510,6 +1527,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         selectedPrediction: prediction
       };
 
+      console.log('Opening betting dialog with data:', dialogData);
+
       // Open the betting dialog
       const dialogRef = this.dialog.open(BetDialogComponent, {
         width: '600px',
@@ -1522,6 +1541,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       // Handle dialog result
       dialogRef.afterClosed().subscribe((result: BetPlacementResult | null) => {
+        console.log('Dialog closed with result:', result);
         if (result) {
           // Place the bet via the service
           this.dashboardService.placeBet(
@@ -1531,6 +1551,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             result.stake
           ).subscribe({
             next: (bet) => {
+              console.log('Bet placed successfully:', bet);
               this.snackBar.open(
                 `Bet placed successfully! Potential win: €${result.potentialWin.toFixed(2)}`, 
                 'Close', 

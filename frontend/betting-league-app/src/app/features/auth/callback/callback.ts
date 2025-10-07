@@ -49,19 +49,26 @@ export class CallbackComponent implements OnInit {
   }
 
   private handleCallback(code: string, state: string): void {
+    console.log('Handling authentication callback:', { code: code?.substring(0, 10) + '...', state });
+    
     this.authService.handleCallback(code, state).subscribe({
       next: (user) => {
         console.log('Authentication successful:', user);
+        this.loading = false;
         
-        // Redirect to intended URL or dashboard
-        const redirectUrl = sessionStorage.getItem('redirectUrl') || '/dashboard';
-        sessionStorage.removeItem('redirectUrl');
-        
-        this.router.navigate([redirectUrl]);
+        // Small delay to ensure UI updates, then redirect
+        setTimeout(() => {
+          // Redirect to intended URL or dashboard
+          const redirectUrl = sessionStorage.getItem('redirectUrl') || '/dashboard';
+          sessionStorage.removeItem('redirectUrl');
+          
+          console.log('Redirecting to:', redirectUrl);
+          this.router.navigate([redirectUrl]);
+        }, 500);
       },
       error: (error) => {
         console.error('Authentication failed:', error);
-        this.error = 'Authentication failed. Please try again.';
+        this.error = `Authentication failed: ${error.message || error}`;
         this.loading = false;
       }
     });
