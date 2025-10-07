@@ -11,6 +11,7 @@ import logging
 import requests
 from typing import Dict, Any, Optional, Tuple
 from urllib.parse import urlencode
+from datetime import datetime, timezone
 
 from jose import jwt, JWTError
 from jose.backends import RSAKey
@@ -397,7 +398,6 @@ class KeycloakService:
             if username and username.startswith("service-account-"):
                 logger.info(f"Skipping user synchronization for service account: {username}")
                 # Create a temporary user object for service accounts (not saved to database)
-                from models.user import User
                 from datetime import datetime, timezone
                 
                 service_user = User(
@@ -473,7 +473,6 @@ class KeycloakService:
                         logger.info(f"Linked existing user to Keycloak: {username}")
                     else:
                         # Create new user
-                        from datetime import datetime, timezone
                         display_name = f"{first_name} {last_name}".strip() or username
                         
                         user = User(

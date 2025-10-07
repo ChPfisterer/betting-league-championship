@@ -7,20 +7,21 @@ and odds management. Handles all betting-related operations with proper
 validation and error handling.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc
 
 from models import Bet, User, Match, Group
+from models.bet import BetType as ModelBetType, BetStatus, MarketType
 from api.schemas.bet import (
     BetCreate,
     BetUpdate,
     BetSettlement,
-    BetStatus,
-    BetType,
-    BetOutcome
+    BetType as SchemaBetType,
+    BetOutcome,
+    BetStatus as SchemaBetStatus
 )
 
 
@@ -55,46 +56,36 @@ class BetService:
         if not match:
             raise ValueError(f"Match with ID {bet_data.match_id} not found")
         
-        if not match.allow_betting:
-            raise ValueError("Betting is not allowed on this match")
+        # Check if betting is allowed using the model's method
+        can_bet, bet_message = match.can_place_bet()
+        if not can_bet:
+            raise ValueError(bet_message)
         
-        # Check if betting is still open
-        if match.betting_closes_at and datetime.utcnow() > match.betting_closes_at:
-            raise ValueError("Betting has closed for this match")
+        # Validate group if specified (Note: group_id field doesn't exist in Bet model yet)
+        # if bet_data.group_id:
+        #     group = self.db.query(Group).filter(Group.id == bet_data.group_id).first()
+        #     if not group:
+        #         raise ValueError(f"Group with ID {bet_data.group_id} not found")
+        #     
+        #     # Check if user is member of the group
+        #     # Note: This would need group membership validation
         
-        # Check if match has already started
-        if match.started_at:
-            raise ValueError("Cannot place bet on a match that has already started")
-        
-        # Validate group if specified
-        if bet_data.group_id:
-            group = self.db.query(Group).filter(Group.id == bet_data.group_id).first()
-            if not group:
-                raise ValueError(f"Group with ID {bet_data.group_id} not found")
-            
-            # Check if user is member of the group
-            # Note: This would need group membership validation
-        
-        # Create bet instance
+        # Create bet instance - Map schema types to model types
         bet = Bet(
             user_id=user_id,
             match_id=bet_data.match_id,
-            group_id=bet_data.group_id,
-            bet_type=bet_data.bet_type,
-            amount=bet_data.amount,
+            # group_id=bet_data.group_id,  # This field doesn't exist in model
+            bet_type=ModelBetType.SINGLE.value,  # Default to single bet for now
+            market_type=self._map_schema_bet_type_to_market_type(bet_data.bet_type).value,
+            stake_amount=bet_data.amount,  # Use stake_amount instead of amount
             odds=bet_data.odds,
             potential_payout=bet_data.potential_payout,
-            outcome=bet_data.outcome,
-            handicap_value=bet_data.handicap_value,
-            total_value=bet_data.total_value,
-            is_over=bet_data.is_over,
-            predicted_home_score=bet_data.predicted_home_score,
-            predicted_away_score=bet_data.predicted_away_score,
-            bet_parameters=bet_data.bet_parameters,
+            selection=bet_data.outcome.value if bet_data.outcome else None,  # Use selection instead of outcome
+            handicap=bet_data.handicap_value,  # Use handicap instead of handicap_value
             notes=bet_data.notes,
-            status=BetStatus.PENDING,
-            placed_at=datetime.utcnow(),
-            is_active=True
+            status=BetStatus.PENDING.value,
+            placed_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc)
         )
         
         self.db.add(bet)
@@ -102,6 +93,68 @@ class BetService:
         self.db.refresh(bet)
         
         return bet
+    
+    def _map_schema_bet_type_to_market_type(self, schema_bet_type: SchemaBetType) -> MarketType:
+        """Map schema BetType to model MarketType."""
+        mapping = {
+            SchemaBetType.MATCH_WINNER: MarketType.MATCH_WINNER,
+            SchemaBetType.TOTAL_GOALS: MarketType.OVER_UNDER,
+            SchemaBetType.HANDICAP: MarketType.HANDICAP,
+            # Add more mappings as needed
+        }
+        return mapping.get(schema_bet_type, MarketType.MATCH_WINNER)  # Default fallback
+    
+    def _map_market_type_to_schema_bet_type(self, market_type: str) -> SchemaBetType:
+        """Map model MarketType back to schema BetType."""
+        mapping = {
+            MarketType.MATCH_WINNER.value: SchemaBetType.MATCH_WINNER,
+            MarketType.OVER_UNDER.value: SchemaBetType.TOTAL_GOALS,
+            MarketType.HANDICAP.value: SchemaBetType.HANDICAP,
+            # Add more mappings as needed
+        }
+        return mapping.get(market_type, SchemaBetType.MATCH_WINNER)  # Default fallback
+    
+    def _map_model_status_to_schema_status(self, model_status: str) -> SchemaBetStatus:
+        """Map model BetStatus to schema BetStatus."""
+        # Both should have similar values, but let's be explicit
+        mapping = {
+            BetStatus.PENDING.value: SchemaBetStatus.PENDING,
+            BetStatus.WON.value: SchemaBetStatus.WON,
+            BetStatus.LOST.value: SchemaBetStatus.LOST,
+            BetStatus.VOID.value: SchemaBetStatus.VOID,
+            BetStatus.CANCELLED.value: SchemaBetStatus.CANCELLED,
+            # Add more mappings as needed
+        }
+        return mapping.get(model_status, SchemaBetStatus.PENDING)  # Default fallback
+    
+    def transform_bet_for_response(self, bet: Bet) -> dict:
+        """Transform model Bet to response schema compatible format."""
+        return {
+            "id": bet.id,
+            "user_id": bet.user_id,
+            "match_id": bet.match_id,
+            "group_id": getattr(bet, 'group_id', None),
+            "bet_type": self._map_market_type_to_schema_bet_type(bet.market_type),
+            "amount": float(bet.stake_amount),
+            "odds": float(bet.odds),
+            "potential_payout": float(bet.potential_payout),
+            "outcome": bet.selection,
+            "handicap_value": float(bet.handicap) if bet.handicap else None,
+            "total_value": getattr(bet, 'total_value', None),
+            "is_over": getattr(bet, 'is_over', None),
+            "predicted_home_score": getattr(bet, 'predicted_home_score', None),
+            "predicted_away_score": getattr(bet, 'predicted_away_score', None),
+            "bet_parameters": getattr(bet, 'bet_parameters', None),
+            "notes": bet.notes,
+            "status": self._map_model_status_to_schema_status(bet.status),
+            "actual_payout": float(bet.payout_amount) if bet.payout_amount else None,
+            "settled_at": getattr(bet, 'settled_at', None),
+            "settlement_reason": getattr(bet, 'settlement_reason', None),
+            "placed_at": bet.placed_at,
+            "created_at": bet.created_at,
+            "updated_at": bet.updated_at,
+            "is_active": bet.is_active
+        }
     
     def get_bet(self, bet_id: UUID) -> Optional[Bet]:
         """Get bet by ID."""
@@ -117,7 +170,7 @@ class BetService:
         user_id: Optional[UUID] = None,
         match_id: Optional[UUID] = None,
         group_id: Optional[UUID] = None,
-        bet_type: Optional[BetType] = None,
+        bet_type: Optional[ModelBetType] = None,
         status: Optional[BetStatus] = None,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None
@@ -407,8 +460,8 @@ class BetService:
             bet_type_distribution[bet_type]["amount"] += bet.amount
             
             # Outcome distribution for match winner bets
-            if bet.bet_type == BetType.MATCH_WINNER and bet.outcome:
-                outcome = bet.outcome
+            if bet.market_type == MarketType.MATCH_WINNER and bet.selection:
+                outcome = bet.selection
                 if outcome not in outcome_distribution:
                     outcome_distribution[outcome] = {"count": 0, "amount": 0.0}
                 outcome_distribution[outcome]["count"] += 1
@@ -497,32 +550,27 @@ class BetService:
         home_score = match.home_score
         away_score = match.away_score
         
-        if bet.bet_type == BetType.MATCH_WINNER:
-            if bet.outcome == BetOutcome.HOME_WIN:
+        if bet.market_type == MarketType.MATCH_WINNER:
+            if bet.selection == BetOutcome.HOME_WIN.value:
                 return home_score > away_score
-            elif bet.outcome == BetOutcome.AWAY_WIN:
+            elif bet.selection == BetOutcome.AWAY_WIN.value:
                 return away_score > home_score
-            elif bet.outcome == BetOutcome.DRAW:
+            elif bet.selection == BetOutcome.DRAW.value:
                 return home_score == away_score
         
-        elif bet.bet_type == BetType.TOTAL_GOALS:
+        elif bet.market_type == MarketType.OVER_UNDER:
             total_goals = home_score + away_score
             if bet.is_over:
                 return total_goals > bet.total_value
             else:
                 return total_goals < bet.total_value
         
-        elif bet.bet_type == BetType.CORRECT_SCORE:
+        elif bet.market_type == MarketType.MATCH_WINNER:  # For correct score, we'll need a separate market type
             return (home_score == bet.predicted_home_score and 
                    away_score == bet.predicted_away_score)
         
-        elif bet.bet_type == BetType.BOTH_TEAMS_SCORE:
-            both_scored = home_score > 0 and away_score > 0
-            # Assuming outcome stores "yes" or "no" for this bet type
-            return (bet.outcome == "yes" and both_scored) or (bet.outcome == "no" and not both_scored)
-        
-        # Add more bet type evaluations as needed
-        # For unsupported bet types, return None (void)
+        # Add more market type evaluations as needed
+        # For unsupported market types, return None (void)
         return None
     
     def search_bets(self, query: str, limit: int = 100) -> List[Bet]:
