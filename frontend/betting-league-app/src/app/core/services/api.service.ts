@@ -184,9 +184,10 @@ export class ApiService {
   placeBet(betData: {
     match_id: string;
     bet_type: string;
-    predicted_outcome: string;
+    amount: number;
     odds: number;
-    stake_amount: number;
+    potential_payout: number;
+    outcome: string;
   }): Observable<Bet> {
     return this.http.post<Bet>(`${this.baseUrl}/api/v1/bets/`, betData);
   }

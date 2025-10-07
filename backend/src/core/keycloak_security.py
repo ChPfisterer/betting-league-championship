@@ -141,25 +141,49 @@ async def get_current_user_hybrid(
         return await get_current_user_from_keycloak(token, keycloak_service, db)
     except HTTPException as keycloak_error:
         if keycloak_error.status_code == status.HTTP_401_UNAUTHORIZED:
-            # If Keycloak auth fails, try traditional JWT
+            # If Keycloak auth fails, try traditional JWT authentication
             try:
-                # Create mock credentials for traditional auth
-                from fastapi.security import HTTPAuthorizationCredentials
-                mock_credentials = HTTPAuthorizationCredentials(
-                    scheme="bearer",
-                    credentials=token
-                )
+                # Import here to avoid circular imports
+                from core.security import verify_token
                 
-                # Try traditional authentication
-                user = await get_current_user_traditional(mock_credentials, db)
+                # Verify traditional JWT token and extract user ID
+                payload = verify_token(token)
+                user_id_str = payload.get("sub")
+                
+                if not user_id_str:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid token: no user ID"
+                    )
+                
+                # Convert to UUID
+                from uuid import UUID
+                user_id = UUID(user_id_str)
+                
+                # Get user from database
+                from models.user import User
+                user = db.query(User).filter(User.id == user_id).first()
+                
+                if not user:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="User not found"
+                    )
+                    
+                if not user.is_active:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="User account is inactive"
+                    )
+                
                 logger.info(f"Successfully authenticated user: {user.username} via traditional JWT")
                 return user
                 
-            except HTTPException:
+            except Exception:
                 # Both methods failed, raise the original Keycloak error
                 raise keycloak_error
         else:
-            # Server error from Keycloak, don't retry
+            # Non-auth error from Keycloak, re-raise
             raise keycloak_error
 
 

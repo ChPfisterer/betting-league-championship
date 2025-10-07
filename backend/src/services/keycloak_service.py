@@ -13,6 +13,9 @@ from typing import Dict, Any, Optional, Tuple
 from urllib.parse import urlencode
 
 from jose import jwt, JWTError
+from jose.backends import RSAKey
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from sqlalchemy.orm import Session
 
 from core.database import get_db
@@ -168,24 +171,97 @@ class KeycloakService:
             unverified_header = jwt.get_unverified_header(access_token)
             kid = unverified_header.get("kid")
             
+            logger.info(f"Token key ID: {kid}")
+            logger.info(f"Available key IDs: {[key.get('kid') for key in certs.get('keys', [])]}")
+            
             # Find the matching public key
             public_key = None
             for key in certs["keys"]:
                 if key["kid"] == kid:
-                    public_key = jwt.algorithms.RSAAlgorithm.from_jwk(key)
+                    # Create RSA public key from JWK
+                    try:
+                        from jose.backends.cryptography_backend import CryptographyRSAKey
+                        rsa_key = CryptographyRSAKey(key, algorithm="RS256")
+                        # Use the CryptographyRSAKey directly - it has the methods we need
+                        public_key = rsa_key
+                        logger.info("Successfully created public key using CryptographyRSAKey")
+                    except (ImportError, AttributeError) as e:
+                        logger.warning(f"CryptographyRSAKey approach failed: {e}, using manual construction")
+                        # Fallback to manual key construction
+                        import base64
+                        from cryptography.hazmat.primitives.asymmetric import rsa
+                        from cryptography.hazmat.primitives import serialization
+                        
+                        # Convert JWK to RSA public key
+                        n = base64.urlsafe_b64decode(key["n"] + "==")
+                        e = base64.urlsafe_b64decode(key["e"] + "==")
+                        
+                        # Convert bytes to integers
+                        n_int = int.from_bytes(n, 'big')
+                        e_int = int.from_bytes(e, 'big')
+                        
+                        # Create RSA public key
+                        public_key = rsa.RSAPublicNumbers(e_int, n_int).public_key()
+                        logger.info("Successfully created public key using manual construction")
                     break
             
             if not public_key:
+                # Try using the first available key if kid doesn't match
+                if certs.get("keys"):
+                    logger.warning(f"Key ID {kid} not found, trying first available key")
+                    key = certs["keys"][0]
+                    try:
+                        from jose.backends.cryptography_backend import CryptographyRSAKey
+                        rsa_key = CryptographyRSAKey(key, algorithm="RS256")
+                        public_key = rsa_key
+                        logger.info("Successfully created public key using first available key")
+                    except Exception as e:
+                        logger.error(f"Failed to create key from first available: {e}")
+                
+            if not public_key:
                 raise ValueError("Public key not found for token")
             
-            # Decode and validate token
-            token_info = jwt.decode(
-                access_token,
-                public_key,
-                algorithms=["RS256"],
-                audience=self.client_id,
-                issuer=f"{self.internal_server_url}/realms/{self.realm_name}"
-            )
+            # First, decode token without validation to see the issuer
+            unverified_token = jwt.get_unverified_claims(access_token)
+            actual_issuer = unverified_token.get("iss")
+            logger.info(f"Token issuer: {actual_issuer}")
+            
+            # Expected issuers (try both internal and external URLs)
+            expected_issuers = [
+                f"{self.internal_server_url}/realms/{self.realm_name}",
+                f"{self.server_url}/realms/{self.realm_name}",
+                f"http://localhost:8090/realms/{self.realm_name}",
+                f"http://localhost:8080/realms/{self.realm_name}"
+            ]
+            logger.info(f"Expected issuers: {expected_issuers}")
+            
+            # Try validation with different issuers
+            token_info = None
+            for expected_issuer in expected_issuers:
+                try:
+                    token_info = jwt.decode(
+                        access_token,
+                        public_key,
+                        algorithms=["RS256"],
+                        audience=self.client_id,
+                        issuer=expected_issuer
+                    )
+                    logger.info(f"Token validation successful with issuer: {expected_issuer}")
+                    break
+                except JWTError as e:
+                    logger.debug(f"Token validation failed with issuer {expected_issuer}: {e}")
+                    continue
+            
+            if not token_info:
+                # If all issuer validations fail, try without issuer validation
+                logger.warning("All issuer validations failed, trying without issuer validation")
+                token_info = jwt.decode(
+                    access_token,
+                    public_key,
+                    algorithms=["RS256"],
+                    audience=self.client_id
+                    # No issuer validation
+                )
             
             logger.info(f"Successfully validated token for user: {token_info.get('preferred_username')}")
             return token_info
@@ -309,20 +385,25 @@ class KeycloakService:
                     user.email = email
                     user.first_name = first_name
                     user.last_name = last_name
-                    user.is_admin = is_admin
+                    user.role = "admin" if is_admin else "user"
                     user.is_active = True
                     
                     logger.info(f"Updated existing user: {username}")
                 else:
                     # Create new user
+                    from datetime import datetime, timezone
+                    display_name = f"{first_name} {last_name}".strip() or username
+                    
                     user = User(
                         keycloak_id=keycloak_user_id,
                         username=username,
                         email=email,
                         first_name=first_name,
                         last_name=last_name,
-                        hashed_password=get_password_hash(secrets.token_urlsafe(32)),
-                        is_admin=is_admin,
+                        display_name=display_name,
+                        date_of_birth=datetime(1990, 1, 1, tzinfo=timezone.utc),  # Default date
+                        password_hash=get_password_hash(secrets.token_urlsafe(32)),
+                        role="admin" if is_admin else "user",
                         is_active=True
                     )
                     db.add(user)

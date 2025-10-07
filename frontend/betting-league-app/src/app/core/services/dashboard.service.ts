@@ -212,13 +212,24 @@ export class DashboardService {
    * Place a prediction through the API
    */
   placeBet(matchId: string, prediction: 'home' | 'draw' | 'away', odds: number, confidence: number): Observable<any> {
+    // Map frontend prediction to backend BetOutcome enum
+    const outcomeMap = {
+      'home': 'home_win',
+      'draw': 'draw', 
+      'away': 'away_win'
+    };
+
+    // Calculate potential payout (required by backend)
+    const amount = confidence; // Use confidence as amount for now (0-10 range)
+    const potentialPayout = amount * odds;
+
     const predictionData = {
       match_id: matchId,
-      bet_type: 'match_result', // Could be expanded for different prediction types
-      predicted_outcome: prediction,
+      bet_type: 'match_winner', // Backend expects this enum value
+      amount: amount,
       odds: odds,
-      confidence_level: confidence,
-      stake_amount: 0 // Set to 0 for fun predictions (no real money)
+      potential_payout: potentialPayout,
+      outcome: outcomeMap[prediction] // Map to backend enum
     };
 
     return this.apiService.placeBet(predictionData);

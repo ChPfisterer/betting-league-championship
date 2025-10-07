@@ -1612,7 +1612,41 @@ export class DashboardComponent implements OnInit, OnDestroy {
               
               // Check if it's an authentication error
               if (error.status === 401) {
-                this.showError('Authentication expired. Please refresh the page and try again.');
+                console.log('401 error detected, attempting token refresh...');
+                // Try refreshing token and retrying the prediction
+                this.authService.refreshToken().subscribe({
+                  next: () => {
+                    console.log('Token refreshed, retrying prediction...');
+                    // Retry the prediction with the new token
+                    this.dashboardService.placeBet(
+                      result.matchId, 
+                      result.prediction, 
+                      result.odds, 
+                      result.confidence
+                    ).subscribe({
+                      next: (prediction) => {
+                        console.log('Prediction placed successfully after token refresh:', prediction);
+                        this.snackBar.open(
+                          `Prediction submitted! 🎯 Potential points: ${potentialPoints}`, 
+                          'Close', 
+                          {
+                            duration: 5000,
+                            panelClass: ['success-snackbar']
+                          }
+                        );
+                        this.loadDashboardData();
+                      },
+                      error: (retryError) => {
+                        console.error('Prediction failed even after token refresh:', retryError);
+                        this.showError('Failed to submit prediction. Please try logging out and back in.');
+                      }
+                    });
+                  },
+                  error: (refreshError) => {
+                    console.error('Token refresh failed:', refreshError);
+                    this.showError('Authentication expired. Please refresh the page and try again.');
+                  }
+                });
               } else if (error.status === 403) {
                 this.showError('You do not have permission to make predictions.');
               } else if (error.status === 0) {
