@@ -11,7 +11,7 @@ from typing import List, Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime, date
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_, or_
 
 from models import Match, Competition, Season, Team, Sport, Bet
@@ -174,7 +174,10 @@ class MatchService:
         Returns:
             List of matches matching criteria
         """
-        query = self.db.query(Match)  # Remove filtering for now to get basic functionality working
+        query = self.db.query(Match).options(
+            joinedload(Match.home_team),
+            joinedload(Match.away_team)
+        )
 
         # Apply filters
         if competition_id:

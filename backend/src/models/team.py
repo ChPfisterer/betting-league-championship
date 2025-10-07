@@ -209,6 +209,11 @@ class Team(Base):
         Index('ix_teams_created_at', 'created_at'),
     )
     
+    # Relationships
+    sport = relationship("Sport", back_populates="teams")
+    home_matches = relationship("Match", foreign_keys="Match.home_team_id", back_populates="home_team")
+    away_matches = relationship("Match", foreign_keys="Match.away_team_id", back_populates="away_team")
+    
     def __init__(self, **kwargs):
         """Initialize Team with proper defaults for TDD testing."""
         # Set default values for testing if not provided
