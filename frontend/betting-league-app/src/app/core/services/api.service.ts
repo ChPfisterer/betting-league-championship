@@ -233,7 +233,7 @@ export class ApiService {
   }
 
   // Utility methods for dashboard
-  getMatchesByStatus(status: 'live' | 'scheduled' | 'completed'): Observable<Match[]> {
+  getMatchesByStatus(status: 'live' | 'scheduled' | 'finished'): Observable<Match[]> {
     return this.matches$.pipe(
       map(matches => matches.filter(match => match.status === status))
     );

@@ -90,6 +90,15 @@ export class DashboardService {
   }
 
   /**
+   * Get recent finished matches formatted for dashboard
+   */
+  getRecentMatches(): Observable<DashboardMatch[]> {
+    return this.apiService.getMatchesByStatus('finished').pipe(
+      map(matches => matches.map(this.transformMatchToDashboard.bind(this)))
+    );
+  }
+
+  /**
    * Get user bets formatted for dashboard
    */
   getUserBets(): Observable<DashboardBet[]> {

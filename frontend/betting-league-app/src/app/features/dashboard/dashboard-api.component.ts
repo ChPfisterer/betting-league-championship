@@ -214,6 +214,55 @@ interface Bet extends DashboardBet {}
               </div>
             </mat-tab>
 
+            <!-- Recent Matches Tab -->
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon>history</mat-icon>
+                Recent
+                <mat-chip *ngIf="recentMatches.length > 0" [matBadge]="recentMatches.length" matBadgePosition="after">
+                  {{ recentMatches.length }}
+                </mat-chip>
+              </ng-template>
+              
+              <div class="tab-content">
+                <div *ngIf="recentMatches.length === 0" class="no-data">
+                  <mat-icon>history</mat-icon>
+                  <h3>No recent matches</h3>
+                  <p>Completed matches will appear here</p>
+                </div>
+                
+                <div *ngIf="recentMatches.length > 0" class="matches-grid">
+                  <mat-card *ngFor="let match of recentMatches" class="match-card finished-match">
+                    <mat-card-header>
+                      <div class="match-header">
+                        <span class="league-name">{{ getLeagueName(match.leagueId) }}</span>
+                        <span class="match-status finished">{{ match.status | titlecase }}</span>
+                      </div>
+                    </mat-card-header>
+                    <mat-card-content>
+                      <div class="match-teams">
+                        <div class="team">
+                          <img [src]="match.homeTeamLogo" alt="{{ match.homeTeam }}" class="team-logo" />
+                          <span class="team-name">{{ match.homeTeam }}</span>
+                          <span class="team-score">{{ match.homeScore || 0 }}</span>
+                        </div>
+                        <div class="vs-divider">-</div>
+                        <div class="team">
+                          <span class="team-score">{{ match.awayScore || 0 }}</span>
+                          <span class="team-name">{{ match.awayTeam }}</span>
+                          <img [src]="match.awayTeamLogo" alt="{{ match.awayTeam }}" class="team-logo" />
+                        </div>
+                      </div>
+                      
+                      <div class="match-result">
+                        <span class="final-score">Final Score: {{ match.homeScore || 0 }} - {{ match.awayScore || 0 }}</span>
+                      </div>
+                    </mat-card-content>
+                  </mat-card>
+                </div>
+              </div>
+            </mat-tab>
+
             <!-- My Bets Tab -->
             <mat-tab>
               <ng-template mat-tab-label>
@@ -486,6 +535,40 @@ interface Bet extends DashboardBet {}
 
     .live-match {
       border-left: 4px solid #ff5722;
+    }
+
+    .finished-match {
+      border-left: 4px solid #9e9e9e;
+      opacity: 0.85;
+    }
+
+    .finished-match .match-status.finished {
+      background-color: #9e9e9e;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .match-result {
+      text-align: center;
+      margin-top: 16px;
+      padding: 8px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+    }
+
+    .final-score {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .team-score {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #1976d2;
+      margin: 0 8px;
     }
 
     .match-header {
@@ -828,6 +911,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   leagues: League[] = [];
   liveMatches: Match[] = [];
   upcomingMatches: Match[] = [];
+  recentMatches: Match[] = [];
   userBets: Bet[] = [];
   userStats: UserStats = {
     totalBets: 0,
@@ -897,6 +981,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading upcoming matches:', error);
           this.showError('Failed to load upcoming matches');
+        }
+      })
+    );
+
+    // Subscribe to recent matches
+    this.subscriptions.push(
+      this.dashboardService.getRecentMatches().subscribe({
+        next: (matches) => {
+          this.recentMatches = matches;
+        },
+        error: (error) => {
+          console.error('Error loading recent matches:', error);
+          this.showError('Failed to load recent matches');
         }
       })
     );
