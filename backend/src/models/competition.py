@@ -275,6 +275,11 @@ class Competition(Base):
         Index('ix_competitions_created_at', 'created_at'),
     )
     
+    # Relationships
+    sport = relationship("Sport", back_populates="competitions")
+    season = relationship("Season", back_populates="competitions")
+    matches = relationship("Match", back_populates="competition")
+    
     def __init__(self, **kwargs):
         """Initialize Competition with proper defaults for TDD testing."""
         # Validate required fields before processing
