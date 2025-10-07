@@ -51,18 +51,33 @@ export class AuthService {
    * Initialize authentication state from stored tokens
    */
   private initializeAuthState(): void {
+    console.log('AuthService: Initializing auth state...');
     const token = this.getAccessToken();
-    if (token && !this.isTokenExpired(token)) {
-      this.loadUserInfo().subscribe({
-        next: (user) => {
-          this.currentUserSubject.next(user);
-          this.isAuthenticatedSubject.next(true);
-        },
-        error: () => {
-          this.clearTokens();
-        }
-      });
+    
+    if (!token) {
+      console.log('AuthService: No token found during initialization');
+      return;
     }
+    
+    console.log('AuthService: Token found, checking if expired...');
+    if (this.isTokenExpired(token)) {
+      console.log('AuthService: Token is expired, clearing...');
+      this.clearTokens();
+      return;
+    }
+    
+    console.log('AuthService: Valid token found, loading user info...');
+    this.loadUserInfo().subscribe({
+      next: (user) => {
+        console.log('AuthService: User info loaded successfully:', user);
+        this.currentUserSubject.next(user);
+        this.isAuthenticatedSubject.next(true);
+      },
+      error: (error) => {
+        console.error('AuthService: Failed to load user info:', error);
+        this.clearTokens();
+      }
+    });
   }
 
   /**
@@ -472,7 +487,45 @@ export class AuthService {
   }
 
   getAccessToken(): string | null {
-    return localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
+    
+    if (!token) {
+      console.log('AuthService: No access token found in localStorage');
+      return null;
+    }
+    
+    // Check if token is expired
+    if (this.isTokenExpired(token)) {
+      console.log('AuthService: Access token is expired');
+      return null;
+    }
+    
+    console.log('AuthService: Valid access token found');
+    return token;
+  }
+
+  hasValidToken(): boolean {
+    const token = this.getAccessToken();
+    return token !== null;
+  }
+
+  /**
+   * Get current authentication status with detailed logging
+   */
+  getAuthStatus(): { authenticated: boolean; hasToken: boolean; tokenValid: boolean; user: User | null } {
+    const hasToken = !!localStorage.getItem('access_token');
+    const tokenValid = this.hasValidToken();
+    const user = this.currentUserSubject.value;
+    const authenticated = this.isAuthenticatedSubject.value;
+    
+    console.log('AuthService: Current auth status:', {
+      authenticated,
+      hasToken,
+      tokenValid,
+      user: user ? 'Present' : 'None'
+    });
+    
+    return { authenticated, hasToken, tokenValid, user };
   }
 
   private getRefreshToken(): string | null {

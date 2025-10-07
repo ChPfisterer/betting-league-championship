@@ -19,7 +19,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { DashboardService, DashboardMatch, DashboardBet, DashboardStats, DashboardLeague } from '../../core/services/dashboard.service';
 import { BetDialogComponent, BetDialogData, BetPlacementResult } from '../betting/bet-dialog/bet-dialog.component';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 
 // Use interfaces from dashboard service
@@ -1513,16 +1513,41 @@ export class DashboardComponent implements OnInit, OnDestroy {
   async placeBet(match: Match, prediction: 'home' | 'draw' | 'away'): Promise<void> {
     try {
       // Check if user is authenticated before proceeding
-      const accessToken = this.authService.getAccessToken();
-      if (!accessToken) {
-        console.error('No access token available for prediction submission');
+      console.log('Checking authentication status...');
+      const authStatus = this.authService.getAuthStatus();
+      
+      if (!authStatus.hasToken) {
+        console.error('No tokens found in localStorage');
+        this.showError('Please log in to make predictions.');
+        return;
+      }
+      
+      if (!authStatus.tokenValid) {
+        console.log('Token invalid or expired, attempting refresh...');
+        
+        // Try to refresh token first
+        try {
+          const refreshResult = await firstValueFrom(this.authService.refreshToken());
+          console.log('Token refresh successful:', refreshResult);
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          this.showError('Your session has expired. Please log in again.');
+          return;
+        }
+      }
+      
+      // Double-check we have a valid token after potential refresh
+      const finalToken = this.authService.getAccessToken();
+      if (!finalToken) {
+        console.error('Still no access token after refresh attempt');
         this.showError('Authentication expired. Please refresh the page and try again.');
         return;
       }
+      
+      console.log('Authentication validated, proceeding with prediction...');
 
       console.log('Making prediction for:', { match, prediction });
       console.log('Match odds:', match.odds);
-      console.log('User authenticated with token:', accessToken ? 'Present' : 'Missing');
 
       // Create dialog data
       const dialogData: BetDialogData = {
