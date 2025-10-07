@@ -33,6 +33,21 @@ from services.competition_service import CompetitionService
 router = APIRouter()
 
 
+def _transform_competition_to_summary(comp: Competition) -> dict:
+    """Transform Competition model data to match CompetitionSummary schema expectations."""
+    return {
+        'id': comp.id,
+        'name': comp.name,
+        'format': comp.format_type,  # Map format_type to format
+        'status': comp.status,
+        'start_date': comp.start_date,
+        'end_date': comp.end_date,
+        'is_active': comp.status in ['active', 'upcoming', 'registration_open'],  # Derive is_active from status
+        'is_public': comp.visibility == 'public',  # Map visibility to is_public
+        'allow_betting': comp.allow_public_betting  # Map allow_public_betting to allow_betting
+    }
+
+
 @router.post(
     "/",
     response_model=CompetitionResponse,
@@ -112,7 +127,9 @@ async def list_competitions(
         search=search,
         year=year
     )
-    return [CompetitionSummary.model_validate(comp) for comp in competitions]
+    
+    # Transform Competition model data to match schema expectations
+    return [CompetitionSummary.model_validate(_transform_competition_to_summary(comp)) for comp in competitions]
 
 
 @router.get(
@@ -137,7 +154,7 @@ async def list_active_competitions(
     """
     service = CompetitionService(db)
     competitions = service.get_active_competitions(limit=limit)
-    return [CompetitionSummary.model_validate(comp) for comp in competitions]
+    return [CompetitionSummary.model_validate(_transform_competition_to_summary(comp)) for comp in competitions]
 
 
 @router.get(
@@ -162,7 +179,7 @@ async def list_public_competitions(
     """
     service = CompetitionService(db)
     competitions = service.get_public_competitions(limit=limit)
-    return [CompetitionSummary.model_validate(comp) for comp in competitions]
+    return [CompetitionSummary.model_validate(_transform_competition_to_summary(comp)) for comp in competitions]
 
 
 @router.get(
@@ -297,7 +314,7 @@ async def list_competitions_by_sport(
     """
     service = CompetitionService(db)
     competitions = service.get_competitions_by_sport(sport_id, limit=limit)
-    return [CompetitionSummary.model_validate(comp) for comp in competitions]
+    return [CompetitionSummary.model_validate(_transform_competition_to_summary(comp)) for comp in competitions]
 
 
 @router.get(
@@ -575,4 +592,4 @@ async def search_competitions(
     """
     service = CompetitionService(db)
     competitions = service.search_competitions(query, limit=limit)
-    return [CompetitionSummary.model_validate(comp) for comp in competitions]
+    return [CompetitionSummary.model_validate(_transform_competition_to_summary(comp)) for comp in competitions]
