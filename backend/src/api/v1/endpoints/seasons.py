@@ -12,7 +12,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
+from core.keycloak_security import get_current_user_hybrid
 from models import User, Season, Sport
 from api.schemas.season import (
     SeasonCreate,
@@ -41,7 +42,7 @@ router = APIRouter()
 async def create_season(
     season_data: SeasonCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> SeasonResponse:
     """
     Create a new season.
@@ -433,7 +434,7 @@ async def update_season(
     season_id: UUID,
     update_data: SeasonUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> SeasonResponse:
     """
     Update season.
@@ -468,7 +469,7 @@ async def update_season(
 async def delete_season(
     season_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> None:
     """
     Delete season (soft delete).
@@ -498,7 +499,7 @@ async def update_season_status(
     season_id: UUID,
     status: SeasonStatus,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> SeasonResponse:
     """
     Update season status.

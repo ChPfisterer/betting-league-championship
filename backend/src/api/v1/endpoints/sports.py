@@ -12,7 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
 from models import User, Sport
 from api.schemas.sport import (
     SportCreate,
@@ -31,7 +31,6 @@ from sqlalchemy.orm import Session
 
 from core import (
     get_db,
-    get_current_user_id,
     http_not_found,
     http_validation_error,
     PaginationParams,
@@ -40,6 +39,7 @@ from core import (
     ValidationError,
     NotFoundError
 )
+from core.keycloak_security import get_current_user_id_hybrid
 from api.schemas.sport import (
     SportCreate,
     SportUpdate,
@@ -62,7 +62,7 @@ router = APIRouter()
 async def create_sport(
     sport_data: SportCreate,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> SportResponse:
     """Create a new sport."""
     try:
@@ -174,7 +174,7 @@ async def update_sport(
     sport_id: UUID,
     sport_update: SportUpdate,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> SportResponse:
     """Update sport information."""
     try:
@@ -195,7 +195,7 @@ async def update_sport(
 async def delete_sport(
     sport_id: UUID,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> None:
     """Delete (deactivate) sport."""
     try:
@@ -213,7 +213,7 @@ async def delete_sport(
 async def activate_sport(
     sport_id: UUID,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> SportResponse:
     """Activate a sport."""
     try:
@@ -232,7 +232,7 @@ async def activate_sport(
 async def deactivate_sport(
     sport_id: UUID,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> SportResponse:
     """Deactivate a sport."""
     try:

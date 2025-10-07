@@ -13,8 +13,6 @@ from sqlalchemy.orm import Session
 
 from core import (
     get_db,
-    get_current_user,
-    get_current_user_id,
     http_not_found,
     http_forbidden,
     http_conflict,
@@ -27,6 +25,7 @@ from core import (
     PermissionError,
     ConflictError
 )
+from core.keycloak_security import get_current_user_hybrid, get_current_user_id_hybrid
 from models.user import User
 from models.group import PointSystem
 from api.schemas.group import (
@@ -50,7 +49,7 @@ router = APIRouter()
 )
 async def create_group(
     group_data: GroupCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_hybrid),
     db: Session = Depends(get_db)
 ) -> GroupResponse:
     """Create a new group."""
@@ -75,7 +74,7 @@ async def list_groups(
     point_system: Optional[PointSystem] = Query(None, description="Filter by point system"),
     search: Optional[str] = Query(None, description="Search in name or description"),
     my_groups: bool = Query(False, description="Show only groups I'm a member of"),
-    current_user_id: UUID = Depends(get_current_user_id),
+    current_user_id: UUID = Depends(get_current_user_id_hybrid),
     db: Session = Depends(get_db)
 ) -> PaginatedResponse[GroupSummary]:
     """List groups with pagination and filtering."""
@@ -110,7 +109,7 @@ async def list_groups(
 )
 async def get_group(
     group_id: UUID,
-    current_user_id: UUID = Depends(get_current_user_id),
+    current_user_id: UUID = Depends(get_current_user_id_hybrid),
     db: Session = Depends(get_db)
 ) -> GroupResponse:
     """Get group by ID."""
@@ -133,7 +132,7 @@ async def get_group(
 )
 async def get_group_with_stats(
     group_id: UUID,
-    current_user_id: UUID = Depends(get_current_user_id),
+    current_user_id: UUID = Depends(get_current_user_id_hybrid),
     db: Session = Depends(get_db)
 ) -> GroupWithStats:
     """Get group with statistics."""
@@ -156,7 +155,7 @@ async def get_group_with_stats(
 )
 async def get_group_by_name(
     name: str,
-    current_user_id: UUID = Depends(get_current_user_id),
+    current_user_id: UUID = Depends(get_current_user_id_hybrid),
     db: Session = Depends(get_db)
 ) -> GroupResponse:
     """Get group by name."""
@@ -180,7 +179,7 @@ async def get_group_by_name(
 async def update_group(
     group_id: UUID,
     group_update: GroupUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_hybrid),
     db: Session = Depends(get_db)
 ) -> GroupResponse:
     """Update group information."""
@@ -205,7 +204,7 @@ async def update_group(
 )
 async def delete_group(
     group_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_hybrid),
     db: Session = Depends(get_db)
 ) -> None:
     """Delete group."""
@@ -225,7 +224,7 @@ async def delete_group(
 )
 async def join_group(
     group_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_hybrid),
     db: Session = Depends(get_db)
 ) -> dict:
     """Join a group."""
@@ -246,7 +245,7 @@ async def join_group(
 )
 async def leave_group(
     group_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_hybrid),
     db: Session = Depends(get_db)
 ) -> dict:
     """Leave a group."""
@@ -267,7 +266,7 @@ async def leave_group(
 )
 async def get_group_members(
     group_id: UUID,
-    current_user_id: UUID = Depends(get_current_user_id),
+    current_user_id: UUID = Depends(get_current_user_id_hybrid),
     db: Session = Depends(get_db)
 ) -> List[dict]:
     """Get group members."""

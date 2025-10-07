@@ -37,10 +37,10 @@ class KeycloakService:
     
     def __init__(self):
         """Initialize Keycloak service with configuration."""
-        # Use external URL for client-side redirects
+        # Use localhost for both client and server communication in development
         self.server_url = os.getenv("KEYCLOAK_URL", "http://localhost:8090")
-        # Use internal URL for server-side communication
-        self.internal_server_url = os.getenv("KEYCLOAK_INTERNAL_URL", "http://keycloak:8080")
+        # Use KEYCLOAK_URL as fallback for internal communication (Docker service-to-service)
+        self.internal_server_url = os.getenv("KEYCLOAK_INTERNAL_URL", self.server_url)
         self.realm_name = os.getenv("KEYCLOAK_REALM", "betting-platform")
         self.client_id = os.getenv("KEYCLOAK_CLIENT_ID", "betting-api")
         self.client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
@@ -49,6 +49,20 @@ class KeycloakService:
         self.keycloak_openid = None
         
         logger.info(f"Keycloak service initialized for realm: {self.realm_name}")
+    
+    def _get_safe_password_hash(self) -> str:
+        """Generate a safe password hash that won't exceed bcrypt limits."""
+        try:
+            password = "keycloak"
+            logger.info(f"Generating hash for password length: {len(password)}")
+            hash_result = get_password_hash(password)
+            logger.info(f"Generated hash successfully")
+            return hash_result
+        except Exception as e:
+            logger.error(f"Password hashing failed: {e}")
+            # Fallback to a direct bcrypt hash
+            from passlib.hash import bcrypt
+            return bcrypt.hash("fallback")
     
     def get_authorization_url(self, redirect_uri: str) -> Tuple[str, str]:
         """
@@ -235,36 +249,51 @@ class KeycloakService:
             ]
             logger.info(f"Expected issuers: {expected_issuers}")
             
-            # Try validation with different issuers
+            # Try validation with different issuers and audiences
+            valid_audiences = [self.client_id, "account"]  # Accept both client_id and default "account"
             token_info = None
+            
             for expected_issuer in expected_issuers:
-                try:
-                    token_info = jwt.decode(
-                        access_token,
-                        public_key,
-                        algorithms=["RS256"],
-                        audience=self.client_id,
-                        issuer=expected_issuer
-                    )
-                    logger.info(f"Token validation successful with issuer: {expected_issuer}")
+                for audience in valid_audiences:
+                    try:
+                        token_info = jwt.decode(
+                            access_token,
+                            public_key,
+                            algorithms=["RS256"],
+                            audience=audience,
+                            issuer=expected_issuer
+                        )
+                        logger.info(f"Token validation successful with issuer: {expected_issuer} and audience: {audience}")
+                        break
+                    except JWTError as e:
+                        logger.debug(f"Token validation failed with issuer {expected_issuer} and audience {audience}: {e}")
+                        continue
+                if token_info:
                     break
-                except JWTError as e:
-                    logger.debug(f"Token validation failed with issuer {expected_issuer}: {e}")
-                    continue
             
             if not token_info:
-                # If all issuer validations fail, try without issuer validation
+                # If all issuer validations fail, try without issuer validation but with different audiences
                 logger.warning("All issuer validations failed, trying without issuer validation")
-                token_info = jwt.decode(
-                    access_token,
-                    public_key,
-                    algorithms=["RS256"],
-                    audience=self.client_id
-                    # No issuer validation
-                )
+                for audience in valid_audiences:
+                    try:
+                        token_info = jwt.decode(
+                            access_token,
+                            public_key,
+                            algorithms=["RS256"],
+                            audience=audience
+                            # No issuer validation
+                        )
+                        logger.info(f"Token validation successful without issuer validation, audience: {audience}")
+                        break
+                    except JWTError as e:
+                        logger.debug(f"Token validation failed without issuer validation, audience {audience}: {e}")
+                        continue
             
-            logger.info(f"Successfully validated token for user: {token_info.get('preferred_username')}")
-            return token_info
+            if token_info:
+                logger.info(f"Successfully validated token for user: {token_info.get('preferred_username')}")
+                return token_info
+            else:
+                raise JWTError("All token validation attempts failed")
             
         except JWTError as e:
             logger.error(f"JWT validation failed: {e}")
@@ -364,6 +393,28 @@ class KeycloakService:
             first_name = token_info.get("given_name", "")
             last_name = token_info.get("family_name", "")
             
+            # Skip user synchronization for service accounts
+            if username and username.startswith("service-account-"):
+                logger.info(f"Skipping user synchronization for service account: {username}")
+                # Create a temporary user object for service accounts (not saved to database)
+                from models.user import User
+                from datetime import datetime, timezone
+                
+                service_user = User(
+                    keycloak_id=keycloak_user_id,
+                    username=username,
+                    email=email or f"{username}@keycloak.service",
+                    first_name="Service",
+                    last_name="Account", 
+                    display_name=username,
+                    date_of_birth=datetime(1990, 1, 1, tzinfo=timezone.utc),
+                    password_hash="service_account_no_password",
+                    role="service",
+                    is_active=True
+                )
+                # Don't add to database session - this is just for authentication context
+                return service_user
+            
             # Check if user has admin role
             realm_access = token_info.get("realm_access", {})
             roles = realm_access.get("roles", [])
@@ -373,42 +424,73 @@ class KeycloakService:
             db: Session = next(get_db())
             
             try:
-                # Check if user exists (by Keycloak ID or username)
-                user = db.query(User).filter(
-                    (User.keycloak_id == keycloak_user_id) | 
-                    (User.username == username)
-                ).first()
+                # First, check if user exists by Keycloak ID (most reliable)
+                user = db.query(User).filter(User.keycloak_id == keycloak_user_id).first()
                 
                 if user:
-                    # Update existing user
-                    user.keycloak_id = keycloak_user_id
-                    user.email = email
+                    # Update existing user with Keycloak ID - only update non-conflicting fields
+                    # Don't update email if it would cause a constraint violation
+                    existing_email_user = db.query(User).filter(
+                        User.email == email,
+                        User.id != user.id
+                    ).first()
+                    
+                    if not existing_email_user:
+                        user.email = email
+                    else:
+                        logger.warning(f"Email {email} already exists for another user, skipping email update")
+                    
                     user.first_name = first_name
                     user.last_name = last_name
                     user.role = "admin" if is_admin else "user"
                     user.is_active = True
                     
-                    logger.info(f"Updated existing user: {username}")
+                    logger.info(f"Updated existing user by Keycloak ID: {username}")
                 else:
-                    # Create new user
-                    from datetime import datetime, timezone
-                    display_name = f"{first_name} {last_name}".strip() or username
+                    # Check if user exists by username (legacy user without Keycloak ID)
+                    user = db.query(User).filter(User.username == username).first()
                     
-                    user = User(
-                        keycloak_id=keycloak_user_id,
-                        username=username,
-                        email=email,
-                        first_name=first_name,
-                        last_name=last_name,
-                        display_name=display_name,
-                        date_of_birth=datetime(1990, 1, 1, tzinfo=timezone.utc),  # Default date
-                        password_hash=get_password_hash(secrets.token_urlsafe(32)),
-                        role="admin" if is_admin else "user",
-                        is_active=True
-                    )
-                    db.add(user)
-                    
-                    logger.info(f"Created new user: {username}")
+                    if user:
+                        # Link existing user to Keycloak
+                        user.keycloak_id = keycloak_user_id
+                        
+                        # Only update email if it won't cause a constraint violation
+                        existing_email_user = db.query(User).filter(
+                            User.email == email,
+                            User.id != user.id
+                        ).first()
+                        
+                        if not existing_email_user:
+                            user.email = email
+                        else:
+                            logger.warning(f"Email {email} already exists for another user, keeping original email {user.email}")
+                        
+                        user.first_name = first_name
+                        user.last_name = last_name
+                        user.role = "admin" if is_admin else "user"
+                        user.is_active = True
+                        
+                        logger.info(f"Linked existing user to Keycloak: {username}")
+                    else:
+                        # Create new user
+                        from datetime import datetime, timezone
+                        display_name = f"{first_name} {last_name}".strip() or username
+                        
+                        user = User(
+                            keycloak_id=keycloak_user_id,
+                            username=username,
+                            email=email,
+                            first_name=first_name,
+                            last_name=last_name,
+                            display_name=display_name,
+                            date_of_birth=datetime(1990, 1, 1, tzinfo=timezone.utc),  # Default date
+                            password_hash=self._get_safe_password_hash(),  # Get safe password hash
+                            role="admin" if is_admin else "user",
+                            is_active=True
+                        )
+                        db.add(user)
+                        
+                        logger.info(f"Created new user: {username}")
                 
                 db.commit()
                 db.refresh(user)

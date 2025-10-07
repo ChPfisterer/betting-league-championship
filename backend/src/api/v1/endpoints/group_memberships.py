@@ -13,7 +13,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
+from core.keycloak_security import get_current_user_hybrid
 from models import User, GroupMembership, Group
 from api.schemas.group_membership import (
     GroupMembershipCreate,
@@ -53,7 +54,7 @@ router = APIRouter()
 async def create_membership(
     membership_data: GroupMembershipCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipResponse:
     """
     Create a new group membership.
@@ -94,7 +95,7 @@ async def list_memberships(
     date_from: Optional[datetime] = Query(None, description="Filter memberships from this date"),
     date_to: Optional[datetime] = Query(None, description="Filter memberships until this date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[GroupMembershipSummary]:
     """
     List memberships with filtering options.
@@ -139,7 +140,7 @@ async def list_memberships(
 async def get_my_groups(
     active_only: bool = Query(True, description="Include only active memberships"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[GroupMembershipSummary]:
     """
     Get current user's group memberships.
@@ -166,7 +167,7 @@ async def get_my_groups(
 async def get_membership(
     membership_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipResponse:
     """
     Get membership by ID.
@@ -200,7 +201,7 @@ async def get_membership(
 async def get_membership_with_user(
     membership_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipWithUser:
     """
     Get membership with user details.
@@ -241,7 +242,7 @@ async def get_group_members(
     group_id: UUID,
     active_only: bool = Query(True, description="Include only active members"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[GroupMembershipWithUser]:
     """
     Get group members.
@@ -278,7 +279,7 @@ async def get_user_groups(
     user_id: UUID,
     active_only: bool = Query(True, description="Include only active memberships"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[GroupMembershipWithGroup]:
     """
     Get user's group memberships.
@@ -314,7 +315,7 @@ async def get_user_groups(
 async def get_group_statistics(
     group_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipStatistics:
     """
     Get group membership statistics.
@@ -341,7 +342,7 @@ async def update_membership(
     membership_id: UUID,
     update_data: GroupMembershipUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipResponse:
     """
     Update membership.
@@ -378,7 +379,7 @@ async def approve_membership(
     membership_id: UUID,
     approval: MembershipApproval,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipResponse:
     """
     Approve or reject membership.
@@ -415,7 +416,7 @@ async def update_member_role(
     membership_id: UUID,
     role_update: MembershipRoleUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipResponse:
     """
     Update member role.
@@ -452,7 +453,7 @@ async def transfer_ownership(
     group_id: UUID,
     transfer: OwnershipTransfer,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> dict:
     """
     Transfer group ownership.
@@ -491,7 +492,7 @@ async def transfer_ownership(
 async def invite_user(
     invitation: GroupInvitation,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipResponse:
     """
     Invite user to group.
@@ -524,7 +525,7 @@ async def invite_user(
 async def request_to_join(
     join_request: GroupJoinRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipResponse:
     """
     Request to join group.
@@ -558,7 +559,7 @@ async def leave_group(
     group_id: UUID,
     leave_request: GroupLeaveRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipResponse:
     """
     Leave group.
@@ -594,7 +595,7 @@ async def leave_group(
 async def bulk_create_memberships(
     bulk_data: GroupMembershipBulkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> GroupMembershipBulkResponse:
     """
     Create multiple memberships in bulk.
@@ -624,7 +625,7 @@ async def bulk_create_memberships(
 async def delete_membership(
     membership_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> None:
     """
     Delete membership.
@@ -657,7 +658,7 @@ async def search_memberships(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[GroupMembershipSummary]:
     """
     Search memberships with advanced filtering.
