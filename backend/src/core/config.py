@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     debug: bool = False
     
     # Database
-    database_url: str = "postgresql://user:password@localhost:5432/betting_league_championship"
+    database_url: str = "postgresql://postgres:postgres123@localhost:5432/betting_championship"
     database_echo: bool = False
     
     # API

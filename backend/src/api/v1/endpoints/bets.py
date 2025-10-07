@@ -13,7 +13,8 @@ from datetime import datetime, date
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
+from core.keycloak_security import get_current_user_hybrid
 from models import User, Bet, Match, Group
 from api.schemas.bet import (
     BetCreate,
@@ -48,7 +49,7 @@ router = APIRouter()
 async def place_bet(
     bet_data: BetCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> BetResponse:
     """
     Place a new bet.
@@ -89,7 +90,7 @@ async def list_bets(
     date_from: Optional[datetime] = Query(None, description="Filter bets from this date"),
     date_to: Optional[datetime] = Query(None, description="Filter bets until this date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[BetSummary]:
     """
     List bets with filtering options.
@@ -134,7 +135,7 @@ async def list_bets(
 async def get_my_bets(
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[BetSummary]:
     """
     Get bets for the current user.
@@ -161,7 +162,7 @@ async def get_my_bets(
 async def list_pending_bets(
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[BetSummary]:
     """
     Get pending bets.
@@ -188,7 +189,7 @@ async def list_pending_bets(
 async def list_active_bets(
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[BetSummary]:
     """
     Get active bets.
@@ -215,7 +216,7 @@ async def list_active_bets(
 async def get_bet(
     bet_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> BetResponse:
     """
     Get bet by ID.
@@ -249,7 +250,7 @@ async def get_bet(
 async def get_bet_with_match(
     bet_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> BetWithMatch:
     """
     Get bet with match details.
@@ -290,7 +291,7 @@ async def list_bets_by_user(
     user_id: UUID,
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[BetSummary]:
     """
     Get bets by user.
@@ -319,7 +320,7 @@ async def list_bets_by_match(
     match_id: UUID,
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[BetSummary]:
     """
     Get bets by match.
@@ -348,7 +349,7 @@ async def list_bets_by_group(
     group_id: UUID,
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[BetSummary]:
     """
     Get bets by group.
@@ -376,7 +377,7 @@ async def list_bets_by_group(
 async def get_user_statistics(
     user_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> dict:
     """
     Get user betting statistics.
@@ -402,7 +403,7 @@ async def get_user_statistics(
 async def get_match_statistics(
     match_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> dict:
     """
     Get match betting statistics.
@@ -429,7 +430,7 @@ async def update_bet(
     bet_id: UUID,
     update_data: BetUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> BetResponse:
     """
     Update bet.
@@ -466,7 +467,7 @@ async def settle_bet(
     bet_id: UUID,
     settlement: BetSettlement,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> BetResponse:
     """
     Settle bet.
@@ -502,7 +503,7 @@ async def settle_bet(
 async def auto_settle_match_bets(
     match_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> dict:
     """
     Auto-settle bets for a match.
@@ -533,7 +534,7 @@ async def auto_settle_match_bets(
 async def cancel_bet(
     bet_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> None:
     """
     Cancel bet.
@@ -565,7 +566,7 @@ async def search_bets(
     query: str,
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[BetSummary]:
     """
     Search bets.

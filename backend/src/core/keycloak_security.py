@@ -7,6 +7,7 @@ traditional JWT authentication and Keycloak OAuth 2.0 tokens.
 
 import logging
 from typing import Optional, Union
+from uuid import UUID
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -78,16 +79,18 @@ async def get_current_user_from_keycloak(
         # Validate token with Keycloak
         token_info = keycloak_service.validate_token(token)
         
-        # Sync user with local database
+        # Sync user with local database (skip for service accounts)
         user = keycloak_service.sync_user_with_keycloak(token_info)
         
-        if not user.is_active:
+        # For service accounts, user will be None - they don't need database sync
+        if user is not None and not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User account is inactive"
             )
         
-        logger.info(f"Successfully authenticated user: {user.username} via Keycloak")
+        if user:
+            logger.info(f"Successfully authenticated user: {user.username} via Keycloak")
         return user
         
     except ValueError as e:
@@ -113,10 +116,10 @@ async def get_current_user_hybrid(
     db: Session = Depends(get_db)
 ) -> User:
     """
-    Get current user supporting both Keycloak and traditional JWT tokens.
+    Get current user from Keycloak access token only.
     
-    This function attempts to authenticate using Keycloak first, then falls back
-    to traditional JWT authentication if the token format doesn't match Keycloak.
+    This function authenticates users exclusively through Keycloak OAuth 2.0 tokens.
+    Traditional JWT authentication has been removed.
     
     Args:
         token: JWT access token from Authorization header
@@ -127,40 +130,35 @@ async def get_current_user_hybrid(
         Authenticated User object
         
     Raises:
-        HTTPException: If authentication fails with both methods
+        HTTPException: If Keycloak authentication fails
     """
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization token required",
+            detail="Authorization token required. Please login with Keycloak.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Try Keycloak authentication first
-    try:
-        return await get_current_user_from_keycloak(token, keycloak_service, db)
-    except HTTPException as keycloak_error:
-        if keycloak_error.status_code == status.HTTP_401_UNAUTHORIZED:
-            # If Keycloak auth fails, try traditional JWT
-            try:
-                # Create mock credentials for traditional auth
-                from fastapi.security import HTTPAuthorizationCredentials
-                mock_credentials = HTTPAuthorizationCredentials(
-                    scheme="bearer",
-                    credentials=token
-                )
-                
-                # Try traditional authentication
-                user = await get_current_user_traditional(mock_credentials, db)
-                logger.info(f"Successfully authenticated user: {user.username} via traditional JWT")
-                return user
-                
-            except HTTPException:
-                # Both methods failed, raise the original Keycloak error
-                raise keycloak_error
-        else:
-            # Server error from Keycloak, don't retry
-            raise keycloak_error
+    # Authenticate using Keycloak only
+    return await get_current_user_from_keycloak(token, keycloak_service, db)
+
+
+async def get_current_user_id_hybrid(
+    current_user: User = Depends(get_current_user_hybrid)
+) -> UUID:
+    """
+    Get current user ID from Keycloak authentication.
+    
+    This is a convenience function for endpoints that only need user ID
+    for authentication verification without the full user object.
+    
+    Args:
+        current_user: Current authenticated user from Keycloak
+        
+    Returns:
+        User ID (UUID)
+    """
+    return current_user.id
 
 
 async def require_admin(

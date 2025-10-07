@@ -78,7 +78,9 @@ export class DashboardService {
    */
   getLiveMatches(): Observable<DashboardMatch[]> {
     return this.apiService.getMatchesByStatus('live').pipe(
-      map(matches => matches.map(this.transformMatchToDashboard.bind(this)))
+      map(matches => {
+        return matches.map(this.transformMatchToDashboard.bind(this));
+      })
     );
   }
 
@@ -87,7 +89,9 @@ export class DashboardService {
    */
   getUpcomingMatches(): Observable<DashboardMatch[]> {
     return this.apiService.getMatchesByStatus('scheduled').pipe(
-      map(matches => matches.map(this.transformMatchToDashboard.bind(this)))
+      map(matches => {
+        return matches.map(this.transformMatchToDashboard.bind(this));
+      })
     );
   }
 
@@ -189,18 +193,30 @@ export class DashboardService {
   }
 
   /**
-   * Place a bet through the API
+   * Place a prediction through the API
    */
-  placeBet(matchId: string, prediction: 'home' | 'draw' | 'away', odds: number, stake: number): Observable<any> {
-    const betData = {
-      match_id: matchId,
-      bet_type: 'match_result', // Could be expanded for different bet types
-      predicted_outcome: prediction,
-      odds: odds,
-      stake_amount: stake
+  placeBet(matchId: string, prediction: 'home' | 'draw' | 'away', odds: number, confidence: number): Observable<any> {
+    // Map frontend prediction to backend BetOutcome enum
+    const outcomeMap = {
+      'home': 'home_win',
+      'draw': 'draw', 
+      'away': 'away_win'
     };
 
-    return this.apiService.placeBet(betData);
+    // Calculate potential payout (required by backend)
+    const amount = confidence; // Use confidence as amount for now (0-10 range)
+    const potentialPayout = amount * odds;
+
+    const predictionData = {
+      match_id: matchId,
+      bet_type: 'match_winner', // Backend expects this enum value
+      amount: amount,
+      odds: odds,
+      potential_payout: potentialPayout,
+      outcome: outcomeMap[prediction] // Map to backend enum
+    };
+
+    return this.apiService.placeBet(predictionData);
   }
 
   /**
@@ -456,4 +472,6 @@ export class DashboardService {
   stopLiveUpdates(): void {
     // TODO: Implement cleanup logic if needed
   }
+
+
 }

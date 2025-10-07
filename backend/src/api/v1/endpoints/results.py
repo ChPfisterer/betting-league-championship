@@ -13,7 +13,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
+from core.keycloak_security import get_current_user_hybrid
 from models import User, Result, Match
 from api.schemas.result import (
     ResultCreate,
@@ -50,7 +51,7 @@ router = APIRouter()
 async def record_result(
     result_data: ResultCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultResponse:
     """
     Record a new match result.
@@ -90,7 +91,7 @@ async def list_results(
     date_from: Optional[datetime] = Query(None, description="Filter results from this date"),
     date_to: Optional[datetime] = Query(None, description="Filter results until this date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[ResultSummary]:
     """
     List results with filtering options.
@@ -133,7 +134,7 @@ async def list_results(
 async def list_pending_results(
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[ResultSummary]:
     """
     Get pending results.
@@ -160,7 +161,7 @@ async def list_pending_results(
 async def list_disputed_results(
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[ResultSummary]:
     """
     Get disputed results.
@@ -187,7 +188,7 @@ async def list_disputed_results(
 async def get_result(
     result_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultResponse:
     """
     Get result by ID.
@@ -221,7 +222,7 @@ async def get_result(
 async def get_result_with_match(
     result_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultWithMatch:
     """
     Get result with match details.
@@ -261,7 +262,7 @@ async def get_result_with_match(
 async def get_result_outcome(
     result_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultOutcome:
     """
     Get result outcome calculation.
@@ -295,7 +296,7 @@ async def get_result_outcome(
 async def validate_result(
     result_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultValidation:
     """
     Validate result data.
@@ -322,7 +323,7 @@ async def validate_result(
 async def list_results_by_match(
     match_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[ResultSummary]:
     """
     Get results by match.
@@ -350,7 +351,7 @@ async def list_results_by_user(
     user_id: UUID,
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[ResultSummary]:
     """
     Get results by user.
@@ -379,7 +380,7 @@ async def get_result_statistics(
     date_from: Optional[datetime] = Query(None, description="Filter from this date"),
     date_to: Optional[datetime] = Query(None, description="Filter until this date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultStatistics:
     """
     Get result statistics.
@@ -406,7 +407,7 @@ async def get_result_statistics(
 async def get_result_analytics(
     period_days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultAnalytics:
     """
     Get result analytics.
@@ -433,7 +434,7 @@ async def update_result(
     result_id: UUID,
     update_data: ResultUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultResponse:
     """
     Update result.
@@ -470,7 +471,7 @@ async def confirm_result(
     result_id: UUID,
     confirmation: ResultConfirmation,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultResponse:
     """
     Confirm result.
@@ -507,7 +508,7 @@ async def dispute_result(
     result_id: UUID,
     dispute: ResultDispute,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultResponse:
     """
     Dispute result.
@@ -542,7 +543,7 @@ async def dispute_result(
 async def bulk_create_results(
     bulk_data: ResultBulkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> ResultBulkResponse:
     """
     Create multiple results in bulk.
@@ -569,7 +570,7 @@ async def bulk_create_results(
 async def delete_result(
     result_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> None:
     """
     Delete result.
@@ -601,7 +602,7 @@ async def search_results(
     query: str,
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[ResultSummary]:
     """
     Search results.

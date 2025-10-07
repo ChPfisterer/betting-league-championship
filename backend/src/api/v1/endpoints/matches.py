@@ -13,7 +13,8 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
+from core.keycloak_security import get_current_user_hybrid
 from models import User, Match, Team, Competition
 from api.schemas.match import (
     MatchCreate,
@@ -44,7 +45,7 @@ router = APIRouter()
 async def create_match(
     match_data: MatchCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> MatchResponse:
     """
     Create a new match.
@@ -497,7 +498,7 @@ async def update_match(
     match_id: UUID,
     update_data: MatchUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> MatchResponse:
     """
     Update match.
@@ -533,7 +534,7 @@ async def update_match_score(
     match_id: UUID,
     score_data: MatchScoreUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> MatchResponse:
     """
     Update match score.
@@ -569,7 +570,7 @@ async def update_match_status(
     match_id: UUID,
     status_data: MatchStatusUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> MatchResponse:
     """
     Update match status.
@@ -604,7 +605,7 @@ async def update_match_status(
 async def delete_match(
     match_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> None:
     """
     Delete match (soft delete).

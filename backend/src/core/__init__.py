@@ -8,14 +8,8 @@ configuration, database, security, exceptions, and utilities.
 from .config import Settings, get_settings, settings
 from .database import get_db, get_db_context, DatabaseSession, Base
 from .security import (
-    get_current_user,
-    get_current_user_id,
-    create_access_token,
-    verify_token,
     get_password_hash,
-    verify_password,
-    OptionalAuth,
-    RequiredAuth
+    verify_password
 )
 from .exceptions import (
     BettingPlatformException,
@@ -55,15 +49,9 @@ __all__ = [
     "DatabaseSession",
     "Base",
     
-    # Security
-    "get_current_user",
-    "get_current_user_id",
-    "create_access_token",
-    "verify_token",
+    # Security (Keycloak-only)
     "get_password_hash",
     "verify_password",
-    "OptionalAuth",
-    "RequiredAuth",
     
     # Exceptions
     "BettingPlatformException",

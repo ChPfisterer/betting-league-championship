@@ -14,10 +14,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { DashboardService, DashboardMatch, DashboardBet, DashboardStats, DashboardLeague } from '../../core/services/dashboard.service';
-import { Subscription } from 'rxjs';
+import { BetDialogComponent, BetDialogData, BetPlacementResult } from '../betting/bet-dialog/bet-dialog.component';
+import { Subscription, firstValueFrom } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 // Use interfaces from dashboard service
 interface League extends DashboardLeague {}
@@ -29,9 +32,9 @@ interface Bet extends DashboardBet {}
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    CommonModule, 
-    MatCardModule, 
-    MatButtonModule, 
+    CommonModule,
+    MatCardModule,
+    MatButtonModule,
     MatIconModule,
     MatTabsModule,
     MatChipsModule,
@@ -43,14 +46,15 @@ interface Bet extends DashboardBet {}
     MatProgressSpinnerModule,
     MatExpansionModule,
     MatToolbarModule,
-    MatMenuModule
+    MatMenuModule,
+    MatDialogModule
   ],
   template: `
     <div class="dashboard-container">
       <!-- Loading spinner -->
       <div *ngIf="isLoading" class="loading-container">
         <mat-spinner></mat-spinner>
-        <p>Loading your betting dashboard...</p>
+        <p>Loading your predictions dashboard...</p>
       </div>
 
       <!-- Dashboard content -->
@@ -62,7 +66,7 @@ interface Bet extends DashboardBet {}
               <mat-icon>sports</mat-icon>
               Welcome back, {{ currentUser?.firstName || currentUser?.username || 'Champion' }}!
             </mat-card-title>
-            <mat-card-subtitle>Your betting dashboard • {{ getCurrentTime() }}</mat-card-subtitle>
+            <mat-card-subtitle>Your predictions dashboard • {{ getCurrentTime() }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="welcome-stats">
@@ -148,16 +152,16 @@ interface Bet extends DashboardBet {}
                         </div>
                       </div>
                       
-                      <div class="betting-odds">
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'home')">
+                      <div class="prediction-odds">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'home')">
                           <span class="odds-label">{{ match.homeTeam }}</span>
                           <span class="odds-value">{{ match.odds.home }}</span>
                         </button>
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'draw')">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'draw')">
                           <span class="odds-label">Draw</span>
                           <span class="odds-value">{{ match.odds.draw }}</span>
                         </button>
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'away')">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'away')">
                           <span class="odds-label">{{ match.awayTeam }}</span>
                           <span class="odds-value">{{ match.odds.away }}</span>
                         </button>
@@ -214,16 +218,16 @@ interface Bet extends DashboardBet {}
                         </div>
                       </div>
                       
-                      <div class="betting-odds">
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'home')">
+                      <div class="prediction-odds">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'home')">
                           <span class="odds-label">{{ match.homeTeam }}</span>
                           <span class="odds-value">{{ match.odds.home }}</span>
                         </button>
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'draw')">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'draw')">
                           <span class="odds-label">Draw</span>
                           <span class="odds-value">{{ match.odds.draw }}</span>
                         </button>
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'away')">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'away')">
                           <span class="odds-label">{{ match.awayTeam }}</span>
                           <span class="odds-value">{{ match.odds.away }}</span>
                         </button>
@@ -310,11 +314,11 @@ interface Bet extends DashboardBet {}
               </div>
             </mat-tab>
 
-            <!-- My Bets Tab -->
+            <!-- My Predictions Tab -->
             <mat-tab>
               <ng-template mat-tab-label>
                 <mat-icon>receipt</mat-icon>
-                My Bets
+                My Predictions
                 <mat-chip *ngIf="userBets.length > 0" [matBadge]="userBets.length" matBadgePosition="after">
                   {{ userBets.length }}
                 </mat-chip>
@@ -323,8 +327,8 @@ interface Bet extends DashboardBet {}
               <div class="tab-content">
                 <div *ngIf="userBets.length === 0" class="no-data">
                   <mat-icon>receipt</mat-icon>
-                  <h3>No bets placed yet</h3>
-                  <p>Start betting on your favorite matches!</p>
+                  <h3>No predictions made yet</h3>
+                  <p>Start making predictions on your favorite matches!</p>
                   <button mat-raised-button color="primary" (click)="navigateToMatches()">
                     <mat-icon>sports</mat-icon>
                     Browse Matches
@@ -415,12 +419,12 @@ interface Bet extends DashboardBet {}
             </mat-card-header>
             <mat-card-content>
               <div class="stat-row">
-                <span class="stat-label">Total Bets</span>
+                <span class="stat-label">Total Predictions</span>
                 <span class="stat-value">{{ userStats.totalBets }}</span>
               </div>
               <mat-divider></mat-divider>
               <div class="stat-row">
-                <span class="stat-label">Active Bets</span>
+                <span class="stat-label">Active Predictions</span>
                 <span class="stat-value">{{ userStats.activeBets }}</span>
               </div>
               <mat-divider></mat-divider>
@@ -891,13 +895,13 @@ interface Bet extends DashboardBet {}
       background: #ff5722;
     }
 
-    .betting-odds {
+    .prediction-odds {
       display: flex;
       gap: 8px;
       margin-top: 16px;
     }
 
-    .odds-button {
+    .predict-button {
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -1155,7 +1159,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private dashboardService: DashboardService,
     private snackBar: MatSnackBar,
-    private router: Router
+    private router: Router,
+    private dialog: MatDialog
   ) {
     this.currentUser = this.authService.getCurrentUser();
   }
@@ -1274,8 +1279,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private async loadDashboardData(): Promise<void> {
     this.isLoading = true;
     try {
+      console.log('Loading dashboard data...');
       await this.dashboardService.loadDashboardData();
+      
+      // Log the loaded data for debugging
+      this.dashboardService.getLiveMatches().subscribe((matches: DashboardMatch[]) => {
+        console.log('Loaded live matches:', matches);
+        console.log('Sample live match odds:', matches[0]?.odds);
+      });
+      
+      this.dashboardService.getUpcomingMatches().subscribe((matches: DashboardMatch[]) => {
+        console.log('Loaded upcoming matches:', matches);
+        console.log('Sample upcoming match odds:', matches[0]?.odds);
+      });
+      
       this.isLoading = false;
+      console.log('Dashboard data loaded successfully');
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       this.showError('Failed to load dashboard data');
@@ -1493,33 +1512,156 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async placeBet(match: Match, prediction: 'home' | 'draw' | 'away'): Promise<void> {
     try {
-      const predictionText = prediction === 'home' ? match.homeTeam : 
-                            prediction === 'away' ? match.awayTeam : 'Draw';
+      // Check if user is authenticated before proceeding
+      console.log('Checking authentication status...');
+      const authStatus = this.authService.getAuthStatus();
       
-      // For now, show a simple prompt for stake amount
-      const stakeInput = prompt(`Place bet on: ${predictionText} @ ${match.odds[prediction]}\n\nEnter stake amount (EUR):`);
-      
-      if (stakeInput && !isNaN(Number(stakeInput))) {
-        const stake = Number(stakeInput);
-        
-        this.dashboardService.placeBet(match.id, prediction, match.odds[prediction], stake).subscribe({
-          next: (bet) => {
-            this.snackBar.open(`Bet placed successfully! Potential win: €${bet.potential_payout}`, 'Close', {
-              duration: 5000,
-              panelClass: ['success-snackbar']
-            });
-            // Refresh data to show new bet
-            this.loadDashboardData();
-          },
-          error: (error) => {
-            console.error('Error placing bet:', error);
-            this.showError('Failed to place bet. Please try again.');
-          }
-        });
+      if (!authStatus.hasToken) {
+        console.error('No tokens found in localStorage');
+        this.showError('Please log in to make predictions.');
+        return;
       }
+      
+      if (!authStatus.tokenValid) {
+        console.log('Token invalid or expired, attempting refresh...');
+        
+        // Try to refresh token first
+        try {
+          const refreshResult = await firstValueFrom(this.authService.refreshToken());
+          console.log('Token refresh successful:', refreshResult);
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          this.showError('Your session has expired. Please log in again.');
+          return;
+        }
+      }
+      
+      // Double-check we have a valid token after potential refresh
+      const finalToken = this.authService.getAccessToken();
+      if (!finalToken) {
+        console.error('Still no access token after refresh attempt');
+        this.showError('Authentication expired. Please refresh the page and try again.');
+        return;
+      }
+      
+      console.log('Authentication validated, proceeding with prediction...');
+
+      console.log('Making prediction for:', { match, prediction });
+      console.log('Match odds:', match.odds);
+
+      // Create dialog data
+      const dialogData: BetDialogData = {
+        match: {
+          id: match.id,
+          homeTeam: match.homeTeam,
+          awayTeam: match.awayTeam,
+          kickoff: match.kickoff,
+          odds: match.odds,
+          status: match.status
+        },
+        selectedPrediction: prediction
+      };
+
+      console.log('Opening prediction dialog with data:', dialogData);
+
+      // Open the prediction dialog
+      const dialogRef = this.dialog.open(BetDialogComponent, {
+        width: '600px',
+        maxWidth: '95vw',
+        maxHeight: '90vh',
+        data: dialogData,
+        disableClose: false,
+        autoFocus: true
+      });
+
+      // Handle dialog result
+      dialogRef.afterClosed().subscribe((result: BetPlacementResult | null) => {
+        console.log('Dialog closed with result:', result);
+        if (result) {
+          // Calculate potential points
+          const potentialPoints = Math.round(result.confidence * result.odds * 10);
+          
+          // Place the prediction via the service
+          this.dashboardService.placeBet(
+            result.matchId, 
+            result.prediction, 
+            result.odds, 
+            result.confidence
+          ).subscribe({
+            next: (prediction) => {
+              console.log('Prediction placed successfully:', prediction);
+              this.snackBar.open(
+                `Prediction submitted! 🎯 Potential points: ${potentialPoints}`, 
+                'Close', 
+                {
+                  duration: 5000,
+                  panelClass: ['success-snackbar']
+                }
+              );
+              // Refresh data to show new prediction
+              this.loadDashboardData();
+            },
+            error: (error) => {
+              console.error('Error placing prediction:', error);
+              console.error('Full error details:', {
+                status: error.status,
+                statusText: error.statusText,
+                message: error.message,
+                error: error.error
+              });
+              
+              // Check if it's an authentication error
+              if (error.status === 401) {
+                console.log('401 error detected, attempting token refresh...');
+                // Try refreshing token and retrying the prediction
+                this.authService.refreshToken().subscribe({
+                  next: () => {
+                    console.log('Token refreshed, retrying prediction...');
+                    // Retry the prediction with the new token
+                    this.dashboardService.placeBet(
+                      result.matchId, 
+                      result.prediction, 
+                      result.odds, 
+                      result.confidence
+                    ).subscribe({
+                      next: (prediction) => {
+                        console.log('Prediction placed successfully after token refresh:', prediction);
+                        this.snackBar.open(
+                          `Prediction submitted! 🎯 Potential points: ${potentialPoints}`, 
+                          'Close', 
+                          {
+                            duration: 5000,
+                            panelClass: ['success-snackbar']
+                          }
+                        );
+                        this.loadDashboardData();
+                      },
+                      error: (retryError) => {
+                        console.error('Prediction failed even after token refresh:', retryError);
+                        this.showError('Failed to submit prediction. Please try logging out and back in.');
+                      }
+                    });
+                  },
+                  error: (refreshError) => {
+                    console.error('Token refresh failed:', refreshError);
+                    this.showError('Authentication expired. Please refresh the page and try again.');
+                  }
+                });
+              } else if (error.status === 403) {
+                this.showError('You do not have permission to make predictions.');
+              } else if (error.status === 0) {
+                this.showError('Cannot connect to server. Please check your internet connection.');
+              } else {
+                this.showError(`Failed to submit prediction: ${error.message || 'Unknown error'}`);
+              }
+            }
+          });
+        }
+      });
+
     } catch (error) {
       console.error('Error in placeBet:', error);
-      this.showError('An error occurred while placing the bet');
+      this.showError('An error occurred while opening the prediction dialog');
     }
   }
 

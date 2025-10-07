@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from typing import Generator
 
 from fastapi import Depends, HTTPException, status
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
@@ -76,8 +76,34 @@ def get_db_context():
 
 
 def create_tables():
-    """Create all database tables."""
+    """Create all database tables and apply schema updates."""
+    # First, handle any schema migrations
+    _migrate_schema()
+    
+    # Then create/update all tables
     Base.metadata.create_all(bind=engine)
+
+
+def _migrate_schema():
+    """Apply any necessary schema migrations."""
+    try:
+        with engine.connect() as conn:
+            # Add keycloak_id column if it doesn't exist
+            result = conn.execute(text("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name='users' AND column_name='keycloak_id'
+            """))
+            if not result.fetchone():
+                # Add keycloak_id column
+                conn.execute(text("""
+                    ALTER TABLE users 
+                    ADD COLUMN keycloak_id VARCHAR(255) UNIQUE
+                """))
+                conn.commit()
+                print("✅ Added keycloak_id column to users table")
+    except Exception as e:
+        print(f"Note: Could not check/add keycloak_id column: {e}")
 
 
 def drop_tables():

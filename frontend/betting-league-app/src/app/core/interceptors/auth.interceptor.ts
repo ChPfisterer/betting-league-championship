@@ -15,6 +15,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
+      console.log('Auth interceptor caught error:', {
+        status: error.status,
+        url: req.url,
+        method: req.method
+      });
+      
       // Handle 401 errors by attempting token refresh
       if (error.status === 401 && !req.url.includes('/oauth/')) {
         return handle401Error(authReq, next, authService);
@@ -44,18 +50,31 @@ function handle401Error(req: HttpRequest<any>, next: any, authService: AuthServi
     isRefreshing = true;
     refreshTokenSubject.next(null);
 
+    console.log('Attempting token refresh for 401 error on:', req.url);
+
     return authService.refreshToken().pipe(
       switchMap((tokenResponse: any): Observable<HttpEvent<any>> => {
         isRefreshing = false;
         refreshTokenSubject.next(tokenResponse.access_token);
         
+        console.log('Token refresh successful, retrying request');
         // Retry the original request with new token
         const newAuthReq = addAuthHeader(req, authService);
         return next(newAuthReq);
       }),
       catchError((error) => {
         isRefreshing = false;
-        authService.logout().subscribe();
+        console.error('Token refresh failed:', error);
+        
+        // Only logout for certain types of requests or after multiple failures
+        // Don't immediately logout for bet/prediction submissions to avoid user frustration
+        if (!req.url.includes('/bets/') && !req.url.includes('/predictions/')) {
+          console.log('Non-critical request failed, logging out');
+          authService.logout().subscribe();
+        } else {
+          console.log('Prediction/bet request failed, but not logging out to preserve user session');
+        }
+        
         return throwError(() => error);
       })
     );

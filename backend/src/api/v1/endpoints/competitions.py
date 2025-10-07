@@ -13,7 +13,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
+from core.keycloak_security import get_current_user_hybrid
 from models import User, Competition, Sport
 from api.schemas.competition import (
     CompetitionCreate,
@@ -58,7 +59,7 @@ def _transform_competition_to_summary(comp: Competition) -> dict:
 async def create_competition(
     competition_data: CompetitionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> CompetitionResponse:
     """
     Create a new competition.
@@ -361,7 +362,7 @@ async def update_competition(
     competition_id: UUID,
     update_data: CompetitionUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> CompetitionResponse:
     """
     Update competition.
@@ -396,7 +397,7 @@ async def update_competition(
 async def delete_competition(
     competition_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> None:
     """
     Delete competition (soft delete).
@@ -426,7 +427,7 @@ async def update_competition_status(
     competition_id: UUID,
     status: CompetitionStatus,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> CompetitionResponse:
     """
     Update competition status.
@@ -462,7 +463,7 @@ async def register_team(
     competition_id: UUID,
     registration_data: CompetitionTeamRegistration,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> dict:
     """
     Register a team for the competition.
@@ -501,7 +502,7 @@ async def unregister_team(
     competition_id: UUID,
     team_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> None:
     """
     Unregister a team from the competition.

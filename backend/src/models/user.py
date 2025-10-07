@@ -85,6 +85,12 @@ class User(Base):
         nullable=False,
         comment="Hashed password for authentication"
     )
+    keycloak_id = Column(
+        String(255),
+        unique=True,
+        nullable=True,
+        comment="Keycloak user ID for SSO integration"
+    )
     
     # Profile fields
     first_name = Column(

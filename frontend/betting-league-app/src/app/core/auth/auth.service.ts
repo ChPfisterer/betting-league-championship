@@ -51,18 +51,33 @@ export class AuthService {
    * Initialize authentication state from stored tokens
    */
   private initializeAuthState(): void {
+    console.log('AuthService: Initializing auth state...');
     const token = this.getAccessToken();
-    if (token && !this.isTokenExpired(token)) {
-      this.loadUserInfo().subscribe({
-        next: (user) => {
-          this.currentUserSubject.next(user);
-          this.isAuthenticatedSubject.next(true);
-        },
-        error: () => {
-          this.clearTokens();
-        }
-      });
+    
+    if (!token) {
+      console.log('AuthService: No token found during initialization');
+      return;
     }
+    
+    console.log('AuthService: Token found, checking if expired...');
+    if (this.isTokenExpired(token)) {
+      console.log('AuthService: Token is expired, clearing...');
+      this.clearTokens();
+      return;
+    }
+    
+    console.log('AuthService: Valid token found, loading user info...');
+    this.loadUserInfo().subscribe({
+      next: (user) => {
+        console.log('AuthService: User info loaded successfully:', user);
+        this.currentUserSubject.next(user);
+        this.isAuthenticatedSubject.next(true);
+      },
+      error: (error) => {
+        console.error('AuthService: Failed to load user info:', error);
+        this.clearTokens();
+      }
+    });
   }
 
   /**
@@ -236,12 +251,15 @@ export class AuthService {
    * Refresh access token
    */
   refreshToken(): Observable<TokenResponse> {
+    console.log('AuthService: Attempting token refresh...');
     const refreshToken = this.getRefreshToken();
     
     if (!refreshToken) {
+      console.error('AuthService: No refresh token available');
       return throwError(() => 'No refresh token available');
     }
 
+    console.log('AuthService: Found refresh token, making request to Keycloak');
     const body = new URLSearchParams({
       grant_type: 'refresh_token',
       client_id: environment.keycloak.clientId,
@@ -257,12 +275,15 @@ export class AuthService {
       body.toString(),
       { headers }
     ).pipe(
-      map((response: any) => ({
-        access_token: response.access_token,
-        refresh_token: response.refresh_token,
-        expires_in: response.expires_in,
-        token_type: response.token_type
-      })),
+      map((response: any) => {
+        console.log('AuthService: Token refresh successful');
+        return {
+          access_token: response.access_token,
+          refresh_token: response.refresh_token,
+          expires_in: response.expires_in,
+          token_type: response.token_type
+        };
+      }),
       tap((tokenResponse) => {
         this.storeTokens(tokenResponse);
       }),
@@ -466,7 +487,45 @@ export class AuthService {
   }
 
   getAccessToken(): string | null {
-    return localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
+    
+    if (!token) {
+      console.log('AuthService: No access token found in localStorage');
+      return null;
+    }
+    
+    // Check if token is expired
+    if (this.isTokenExpired(token)) {
+      console.log('AuthService: Access token is expired');
+      return null;
+    }
+    
+    console.log('AuthService: Valid access token found');
+    return token;
+  }
+
+  hasValidToken(): boolean {
+    const token = this.getAccessToken();
+    return token !== null;
+  }
+
+  /**
+   * Get current authentication status with detailed logging
+   */
+  getAuthStatus(): { authenticated: boolean; hasToken: boolean; tokenValid: boolean; user: User | null } {
+    const hasToken = !!localStorage.getItem('access_token');
+    const tokenValid = this.hasValidToken();
+    const user = this.currentUserSubject.value;
+    const authenticated = this.isAuthenticatedSubject.value;
+    
+    console.log('AuthService: Current auth status:', {
+      authenticated,
+      hasToken,
+      tokenValid,
+      user: user ? 'Present' : 'None'
+    });
+    
+    return { authenticated, hasToken, tokenValid, user };
   }
 
   private getRefreshToken(): string | null {

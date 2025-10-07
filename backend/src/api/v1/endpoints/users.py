@@ -13,8 +13,6 @@ from sqlalchemy.orm import Session
 
 from core import (
     get_db,
-    get_current_user,
-    get_current_user_id,
     http_not_found,
     http_forbidden,
     http_conflict,
@@ -23,6 +21,7 @@ from core import (
     PaginatedResponse,
     paginate_query
 )
+from core.keycloak_security import get_current_user_hybrid, get_current_user_id_hybrid
 from models.user import User, UserStatus
 from api.schemas.user import (
     UserCreate,
@@ -44,7 +43,7 @@ router = APIRouter()
     description="Retrieve the authenticated user's profile with statistics"
 )
 async def get_current_user_profile(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> UserProfile:
     """Get current user's profile."""
     return UserService.get_user_profile(current_user)
@@ -58,7 +57,7 @@ async def get_current_user_profile(
 )
 async def update_current_user(
     user_update: UserUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_hybrid),
     db: Session = Depends(get_db)
 ) -> UserResponse:
     """Update current user's profile."""
@@ -77,7 +76,7 @@ async def update_current_user(
 )
 async def update_current_user_password(
     password_update: UserPasswordUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_hybrid),
     db: Session = Depends(get_db)
 ) -> dict:
     """Update current user's password."""
@@ -104,7 +103,7 @@ async def list_users(
     status_filter: Optional[UserStatus] = Query(None, description="Filter by user status"),
     search: Optional[str] = Query(None, description="Search in username, email, or name"),
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> PaginatedResponse[UserSummary]:
     """List users with pagination and filtering."""
     query = UserService.build_user_list_query(db, status_filter, search)
@@ -127,7 +126,7 @@ async def list_users(
 async def get_user(
     user_id: UUID,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> UserResponse:
     """Get user by ID."""
     user = UserService.get_user_by_id(db, user_id)
@@ -146,7 +145,7 @@ async def get_user(
 async def get_user_profile(
     user_id: UUID,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> UserProfile:
     """Get user profile with statistics."""
     user = UserService.get_user_by_id(db, user_id)
@@ -165,7 +164,7 @@ async def get_user_profile(
 async def get_user_by_username(
     username: str,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> UserResponse:
     """Get user by username."""
     user = UserService.get_user_by_username(db, username)
@@ -184,7 +183,7 @@ async def get_user_by_username(
 async def update_user_status(
     user_id: UUID,
     new_status: UserStatus,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_hybrid),
     db: Session = Depends(get_db)
 ) -> UserResponse:
     """Update user status (admin only)."""
@@ -211,7 +210,7 @@ async def update_user_status(
 )
 async def delete_user(
     user_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_hybrid),
     db: Session = Depends(get_db)
 ) -> None:
     """Delete user account."""

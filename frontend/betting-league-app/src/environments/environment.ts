@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8000',
+  apiUrl: 'http://localhost:8000',  // Fixed: backend runs on port 8000
   keycloak: {
     url: 'http://localhost:8090',
     realm: 'betting-platform',

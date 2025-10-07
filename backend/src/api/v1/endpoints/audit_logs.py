@@ -13,7 +13,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
+from core.keycloak_security import get_current_user_hybrid
 from models import User, AuditLog
 from api.schemas.audit_log import (
     AuditLogCreate,
@@ -52,7 +53,7 @@ router = APIRouter()
 async def create_audit_log(
     log_data: AuditLogCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> AuditLogResponse:
     """
     Create a new audit log entry.
@@ -99,7 +100,7 @@ async def list_audit_logs(
     sort_by: str = Query("created_at", description="Field to sort by"),
     sort_order: str = Query("desc", description="Sort order (asc/desc)"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[AuditLogSummary]:
     """
     List audit logs with filtering options.
@@ -162,7 +163,7 @@ async def list_audit_logs(
 async def get_audit_log(
     log_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> AuditLogResponse:
     """
     Get audit log by ID.
@@ -196,7 +197,7 @@ async def get_audit_log(
 async def get_audit_log_with_user(
     log_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> AuditLogWithUser:
     """
     Get audit log with user details.
@@ -238,7 +239,7 @@ async def get_audit_log_with_user(
 async def get_audit_log_with_details(
     log_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> AuditLogWithDetails:
     """
     Get audit log with full contextual information.
@@ -301,7 +302,7 @@ async def get_audit_statistics(
     entity_types: Optional[List[EntityType]] = Query(None, description="Filter by entity types"),
     levels: Optional[List[LogLevel]] = Query(None, description="Filter by log levels"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> AuditLogStatistics:
     """
     Get comprehensive audit log statistics.
@@ -341,7 +342,7 @@ async def get_security_analytics(
     date_from: Optional[datetime] = Query(None, description="Analytics from this date"),
     date_to: Optional[datetime] = Query(None, description="Analytics until this date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> AuditLogAnalytics:
     """
     Get advanced security analytics.
@@ -375,7 +376,7 @@ async def update_audit_log(
     log_id: UUID,
     update_data: AuditLogUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> AuditLogResponse:
     """
     Update audit log (limited fields only).
@@ -413,7 +414,7 @@ async def search_audit_logs(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[AuditLogSummary]:
     """
     Search audit logs with advanced filtering.
@@ -456,7 +457,7 @@ async def search_audit_logs(
 async def bulk_create_audit_logs(
     bulk_data: AuditLogBulkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> AuditLogBulkResponse:
     """
     Create multiple audit logs in bulk.
@@ -486,7 +487,7 @@ async def bulk_create_audit_logs(
 async def export_audit_logs(
     export_request: AuditLogExport,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> AuditLogExportResponse:
     """
     Export audit logs to specified format.
@@ -516,7 +517,7 @@ async def export_audit_logs(
 async def archive_audit_logs(
     archive_request: AuditLogArchive,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> AuditLogArchiveResponse:
     """
     Archive old audit logs.
@@ -551,7 +552,7 @@ async def get_user_activity(
     date_from: Optional[datetime] = Query(None, description="Activity from this date"),
     date_to: Optional[datetime] = Query(None, description="Activity until this date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[AuditLogSummary]:
     """
     Get audit logs for a specific user.
@@ -601,7 +602,7 @@ async def get_entity_history(
     date_from: Optional[datetime] = Query(None, description="History from this date"),
     date_to: Optional[datetime] = Query(None, description="History until this date"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> List[AuditLogSummary]:
     """
     Get audit logs for a specific entity.
@@ -647,7 +648,7 @@ async def get_entity_history(
 async def delete_audit_log(
     log_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> None:
     """
     Delete audit log (admin only).
