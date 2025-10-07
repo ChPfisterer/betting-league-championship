@@ -75,6 +75,7 @@ class BetService:
             match_id=bet_data.match_id,
             # group_id=bet_data.group_id,  # This field doesn't exist in model
             bet_type=bet_data.bet_type,
+            market_type=bet_data.bet_type.value,  # Set market_type to bet_type value
             stake_amount=bet_data.amount,  # Use stake_amount instead of amount
             odds=bet_data.odds,
             potential_payout=bet_data.potential_payout,
