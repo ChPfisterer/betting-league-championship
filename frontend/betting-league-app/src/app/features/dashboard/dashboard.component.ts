@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,64 +9,16 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../core/auth/auth.service';
+import { DashboardService, DashboardMatch, DashboardBet, DashboardStats, DashboardLeague } from '../../core/services/dashboard.service';
+import { Subscription } from 'rxjs';
 
-interface League {
-  id: string;
-  name: string;
-  sport: string;
-  country: string;
-  icon: string;
-  season: string;
-  matchCount: number;
-}
-
-interface Match {
-  id: string;
-  leagueId: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeTeamLogo: string;
-  awayTeamLogo: string;
-  kickoff: Date;
-  status: 'upcoming' | 'live' | 'finished';
-  homeScore?: number;
-  awayScore?: number;
-  odds: {
-    home: number;
-    draw: number;
-    away: number;
-  };
-  liveData?: {
-    minute: number;
-    possession: { home: number; away: number };
-  };
-}
-
-interface UserStats {
-  totalBets: number;
-  activeBets: number;
-  wins: number;
-  losses: number;
-  winRate: number;
-  totalStake: number;
-  totalWinnings: number;
-  profit: number;
-  currentRank: number;
-  totalUsers: number;
-}
-
-interface Bet {
-  id: string;
-  matchId: string;
-  match: string;
-  prediction: string;
-  odds: number;
-  stake: number;
-  potentialWin: number;
-  status: 'pending' | 'won' | 'lost';
-  placedAt: Date;
-}
+// Use interfaces from dashboard service instead of local ones
+interface League extends DashboardLeague {}
+interface Match extends DashboardMatch {}
+interface UserStats extends DashboardStats {}
+interface Bet extends DashboardBet {}
 
 @Component({
   selector: 'app-dashboard',
@@ -81,7 +33,8 @@ interface Bet {
     MatProgressBarModule,
     MatBadgeModule,
     MatDividerModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSnackBarModule
   ],
   template: `
     <div class="dashboard-container">
