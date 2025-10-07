@@ -1,0 +1,18 @@
+<div class="callback-container">
+  <mat-card class="callback-card">
+    <mat-card-content>
+      <div *ngIf="loading" class="loading-section">
+        <mat-spinner></mat-spinner>
+        <p class="loading-text">Completing authentication...</p>
+      </div>
+      
+      <div *ngIf="error" class="error-section">
+        <h2>Authentication Error</h2>
+        <p>{{ error }}</p>
+        <button mat-raised-button color="primary" (click)="goHome()">
+          Return to Home
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

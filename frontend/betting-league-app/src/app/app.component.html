@@ -1,0 +1,27 @@
+<div class="app-container">
+  <header class="app-header" *ngIf="isAuthenticated$ | async">
+    <nav class="navbar">
+      <div class="nav-brand">
+        <mat-icon class="brand-icon">sports_soccer</mat-icon>
+        <span class="brand-text">Betting Championship</span>
+      </div>
+      
+      <div class="nav-actions">
+        <span class="user-greeting" *ngIf="currentUser$ | async as user">
+          Welcome, {{ user.firstName || user.username }}!
+        </span>
+        <button mat-icon-button (click)="logout()" title="Logout">
+          <mat-icon>logout</mat-icon>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="app-content">
+    <router-outlet></router-outlet>
+  </main>
+
+  <footer class="app-footer" *ngIf="isAuthenticated$ | async">
+    <p>&copy; 2025 Betting League Championship. All rights reserved.</p>
+  </footer>
+</div>
