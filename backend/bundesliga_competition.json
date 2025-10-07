@@ -1,0 +1,10 @@
+{
+  "leagueId": 3,
+  "leagueName": "1. Fu\u00dfball-Bundesliga 2007/2008",
+  "leagueShortcut": "bl1",
+  "leagueSeason": "2007",
+  "sport": {
+    "sportId": 1,
+    "sportName": "Fu\u00dfball"
+  }
+}
