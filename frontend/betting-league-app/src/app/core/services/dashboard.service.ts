@@ -209,18 +209,19 @@ export class DashboardService {
   }
 
   /**
-   * Place a bet through the API
+   * Place a prediction through the API
    */
-  placeBet(matchId: string, prediction: 'home' | 'draw' | 'away', odds: number, stake: number): Observable<any> {
-    const betData = {
+  placeBet(matchId: string, prediction: 'home' | 'draw' | 'away', odds: number, confidence: number): Observable<any> {
+    const predictionData = {
       match_id: matchId,
-      bet_type: 'match_result', // Could be expanded for different bet types
+      bet_type: 'match_result', // Could be expanded for different prediction types
       predicted_outcome: prediction,
       odds: odds,
-      stake_amount: stake
+      confidence_level: confidence,
+      stake_amount: 0 // Set to 0 for fun predictions (no real money)
     };
 
-    return this.apiService.placeBet(betData);
+    return this.apiService.placeBet(predictionData);
   }
 
   /**

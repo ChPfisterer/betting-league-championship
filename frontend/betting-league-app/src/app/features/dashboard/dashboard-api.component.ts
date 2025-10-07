@@ -53,7 +53,7 @@ interface Bet extends DashboardBet {}
       <!-- Loading spinner -->
       <div *ngIf="isLoading" class="loading-container">
         <mat-spinner></mat-spinner>
-        <p>Loading your betting dashboard...</p>
+        <p>Loading your predictions dashboard...</p>
       </div>
 
       <!-- Dashboard content -->
@@ -65,7 +65,7 @@ interface Bet extends DashboardBet {}
               <mat-icon>sports</mat-icon>
               Welcome back, {{ currentUser?.firstName || currentUser?.username || 'Champion' }}!
             </mat-card-title>
-            <mat-card-subtitle>Your betting dashboard • {{ getCurrentTime() }}</mat-card-subtitle>
+            <mat-card-subtitle>Your predictions dashboard • {{ getCurrentTime() }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="welcome-stats">
@@ -151,16 +151,16 @@ interface Bet extends DashboardBet {}
                         </div>
                       </div>
                       
-                      <div class="betting-odds">
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'home')">
+                      <div class="prediction-odds">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'home')">
                           <span class="odds-label">{{ match.homeTeam }}</span>
                           <span class="odds-value">{{ match.odds.home }}</span>
                         </button>
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'draw')">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'draw')">
                           <span class="odds-label">Draw</span>
                           <span class="odds-value">{{ match.odds.draw }}</span>
                         </button>
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'away')">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'away')">
                           <span class="odds-label">{{ match.awayTeam }}</span>
                           <span class="odds-value">{{ match.odds.away }}</span>
                         </button>
@@ -217,16 +217,16 @@ interface Bet extends DashboardBet {}
                         </div>
                       </div>
                       
-                      <div class="betting-odds">
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'home')">
+                      <div class="prediction-odds">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'home')">
                           <span class="odds-label">{{ match.homeTeam }}</span>
                           <span class="odds-value">{{ match.odds.home }}</span>
                         </button>
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'draw')">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'draw')">
                           <span class="odds-label">Draw</span>
                           <span class="odds-value">{{ match.odds.draw }}</span>
                         </button>
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'away')">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'away')">
                           <span class="odds-label">{{ match.awayTeam }}</span>
                           <span class="odds-value">{{ match.odds.away }}</span>
                         </button>
@@ -894,13 +894,13 @@ interface Bet extends DashboardBet {}
       background: #ff5722;
     }
 
-    .betting-odds {
+    .prediction-odds {
       display: flex;
       gap: 8px;
       margin-top: 16px;
     }
 
-    .odds-button {
+    .predict-button {
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -1511,7 +1511,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async placeBet(match: Match, prediction: 'home' | 'draw' | 'away'): Promise<void> {
     try {
-      console.log('PlaceBet called with:', { match, prediction });
+      console.log('Making prediction for:', { match, prediction });
       console.log('Match odds:', match.odds);
 
       // Create dialog data
@@ -1527,9 +1527,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         selectedPrediction: prediction
       };
 
-      console.log('Opening betting dialog with data:', dialogData);
+      console.log('Opening prediction dialog with data:', dialogData);
 
-      // Open the betting dialog
+      // Open the prediction dialog
       const dialogRef = this.dialog.open(BetDialogComponent, {
         width: '600px',
         maxWidth: '95vw',
@@ -1543,29 +1543,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
       dialogRef.afterClosed().subscribe((result: BetPlacementResult | null) => {
         console.log('Dialog closed with result:', result);
         if (result) {
-          // Place the bet via the service
+          // Calculate potential points
+          const potentialPoints = Math.round(result.confidence * result.odds * 10);
+          
+          // Place the prediction via the service
           this.dashboardService.placeBet(
             result.matchId, 
             result.prediction, 
             result.odds, 
-            result.stake
+            result.confidence
           ).subscribe({
-            next: (bet) => {
-              console.log('Bet placed successfully:', bet);
+            next: (prediction) => {
+              console.log('Prediction placed successfully:', prediction);
               this.snackBar.open(
-                `Bet placed successfully! Potential win: €${result.potentialWin.toFixed(2)}`, 
+                `Prediction submitted! 🎯 Potential points: ${potentialPoints}`, 
                 'Close', 
                 {
                   duration: 5000,
                   panelClass: ['success-snackbar']
                 }
               );
-              // Refresh data to show new bet
+              // Refresh data to show new prediction
               this.loadDashboardData();
             },
             error: (error) => {
-              console.error('Error placing bet:', error);
-              this.showError('Failed to place bet. Please try again.');
+              console.error('Error placing prediction:', error);
+              this.showError('Failed to submit prediction. Please try again.');
             }
           });
         }
@@ -1573,7 +1576,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     } catch (error) {
       console.error('Error in placeBet:', error);
-      this.showError('An error occurred while opening the betting dialog');
+      this.showError('An error occurred while opening the prediction dialog');
     }
   }
 

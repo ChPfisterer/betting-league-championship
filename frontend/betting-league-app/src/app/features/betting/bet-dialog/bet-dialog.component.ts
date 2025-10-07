@@ -31,8 +31,7 @@ export interface BetPlacementResult {
   matchId: string;
   prediction: 'home' | 'draw' | 'away';
   odds: number;
-  stake: number;
-  potentialWin: number;
+  confidence: number; // 1-10 confidence level
 }
 
 @Component({
@@ -57,7 +56,7 @@ export interface BetPlacementResult {
       <div class="dialog-header">
         <h2 mat-dialog-title>
           <mat-icon>sports_soccer</mat-icon>
-          Place Your Bet
+          Make Your Prediction
         </h2>
         <button mat-icon-button (click)="onCancel()" class="close-button">
           <mat-icon>close</mat-icon>
@@ -119,88 +118,73 @@ export interface BetPlacementResult {
           </mat-card-content>
         </mat-card>
 
-        <!-- Bet Amount Selection -->
-        <mat-card class="stake-card">
+        <!-- Confidence Level Selection -->
+        <mat-card class="confidence-card">
           <mat-card-header>
-            <mat-card-title>Bet Amount</mat-card-title>
+            <mat-card-title>
+              <mat-icon>psychology</mat-icon>
+              How Confident Are You?
+            </mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <form [formGroup]="betForm">
-              <!-- Quick Stake Buttons -->
-              <div class="quick-stakes">
+              <!-- Quick Confidence Buttons -->
+              <div class="quick-confidence">
                 <mat-chip-listbox>
                   <mat-chip-option 
-                    *ngFor="let amount of quickStakeAmounts" 
-                    (click)="setStake(amount)"
-                    [selected]="betForm.get('stake')?.value === amount">
-                    €{{ amount }}
+                    *ngFor="let level of confidenceLevels" 
+                    (click)="setConfidence(level.value)"
+                    [selected]="betForm.get('confidence')?.value === level.value">
+                    {{ level.label }}
                   </mat-chip-option>
                 </mat-chip-listbox>
               </div>
 
-              <!-- Custom Stake Input -->
-              <mat-form-field appearance="outline" class="stake-input">
-                <mat-label>Stake Amount (EUR)</mat-label>
-                <input 
-                  matInput 
-                  type="number" 
-                  formControlName="stake"
-                  min="1"
-                  max="1000"
-                  step="0.01"
-                  placeholder="Enter amount">
-                <mat-icon matSuffix>euro</mat-icon>
-                <mat-error *ngIf="betForm.get('stake')?.hasError('required')">
-                  Stake amount is required
-                </mat-error>
-                <mat-error *ngIf="betForm.get('stake')?.hasError('min')">
-                  Minimum stake is €1
-                </mat-error>
-                <mat-error *ngIf="betForm.get('stake')?.hasError('max')">
-                  Maximum stake is €1000
-                </mat-error>
-              </mat-form-field>
-
-              <!-- Stake Slider -->
-              <div class="stake-slider-container">
+              <!-- Confidence Slider -->
+              <div class="confidence-slider-container">
+                <label class="confidence-label">Confidence Level: {{ betForm.get('confidence')?.value }}/10</label>
                 <mat-slider 
                   min="1" 
-                  max="100" 
+                  max="10" 
                   step="1" 
                   discrete
                   (input)="onSliderChange($event)">
-                  <input matSliderThumb [value]="betForm.get('stake')?.value || 1">
+                  <input matSliderThumb [value]="betForm.get('confidence')?.value || 5">
                 </mat-slider>
+                <div class="confidence-scale">
+                  <span>Not Sure</span>
+                  <span>Very Confident</span>
+                </div>
               </div>
             </form>
           </mat-card-content>
         </mat-card>
 
-        <!-- Bet Summary -->
-        <mat-card class="bet-summary-card" *ngIf="isValidBet()">
+        <!-- Prediction Summary -->
+        <mat-card class="prediction-summary-card" *ngIf="isValidPrediction()">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>calculate</mat-icon>
-              Bet Summary
+              <mat-icon>preview</mat-icon>
+              Your Prediction
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <div class="summary-row">
-              <span class="label">Selection:</span>
-              <span class="value">{{ getPredictionText() }} @ {{ getSelectedOdds() | number:'1.2-2' }}</span>
+              <span class="label">You predict:</span>
+              <span class="value prediction-text">{{ getPredictionText() }}</span>
             </div>
             <div class="summary-row">
-              <span class="label">Stake:</span>
-              <span class="value">€{{ betForm.get('stake')?.value | number:'1.2-2' }}</span>
+              <span class="label">Odds:</span>
+              <span class="value">{{ getSelectedOdds() | number:'1.2-2' }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Confidence:</span>
+              <span class="value confidence-level">{{ betForm.get('confidence')?.value }}/10 {{ getConfidenceLabel() }}</span>
             </div>
             <mat-divider></mat-divider>
             <div class="summary-row total">
-              <span class="label">Potential Win:</span>
-              <span class="value potential-win">€{{ calculatePotentialWin() | number:'1.2-2' }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Net Profit:</span>
-              <span class="value net-profit">€{{ calculateNetProfit() | number:'1.2-2' }}</span>
+              <span class="label">Potential Points:</span>
+              <span class="value potential-points">{{ calculatePotentialPoints() }} pts</span>
             </div>
           </mat-card-content>
         </mat-card>
@@ -214,11 +198,11 @@ export interface BetPlacementResult {
           <button 
             mat-raised-button 
             color="primary" 
-            (click)="onPlaceBet()"
-            [disabled]="!isValidBet()"
-            class="place-bet-button">
-            <mat-icon>sports</mat-icon>
-            Place Bet - €{{ betForm.get('stake')?.value | number:'1.2-2' }}
+            (click)="onMakePrediction()"
+            [disabled]="!isValidPrediction()"
+            class="make-prediction-button">
+            <mat-icon>check_circle</mat-icon>
+            Submit Prediction
           </button>
         </div>
       </mat-dialog-actions>
@@ -329,30 +313,40 @@ export interface BetPlacementResult {
       font-weight: 700;
     }
 
-    .stake-card {
+    .confidence-card {
       margin-bottom: 16px;
     }
 
-    .quick-stakes {
+    .quick-confidence {
       margin-bottom: 16px;
     }
 
-    .quick-stakes mat-chip-listbox {
+    .quick-confidence mat-chip-listbox {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
     }
 
-    .stake-input {
-      width: 100%;
+    .confidence-slider-container {
       margin-bottom: 16px;
     }
 
-    .stake-slider-container {
-      margin-bottom: 16px;
+    .confidence-label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 500;
+      color: #666;
     }
 
-    .bet-summary-card {
+    .confidence-scale {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 12px;
+      color: #999;
+    }
+
+    .prediction-summary-card {
       background: #f8f9fa;
       border: 2px solid #e9ecef;
     }
@@ -377,14 +371,20 @@ export interface BetPlacementResult {
       font-weight: 500;
     }
 
-    .potential-win {
+    .potential-points {
       color: #4caf50;
-      font-weight: 700;
+      font-weight: 600;
+      font-size: 1.1em;
     }
 
-    .net-profit {
-      color: #2e7d32;
+    .prediction-text {
+      color: #1976d2;
       font-weight: 600;
+    }
+
+    .confidence-level {
+      color: #ff9800;
+      font-weight: 500;
     }
 
     .dialog-actions {
@@ -394,14 +394,14 @@ export interface BetPlacementResult {
       width: 100%;
     }
 
-    .place-bet-button {
+    .make-prediction-button {
       background: #4caf50;
       color: white;
       padding: 12px 24px;
       font-weight: 600;
     }
 
-    .place-bet-button:disabled {
+    .make-prediction-button:disabled {
       background: #ccc;
       color: #666;
     }
@@ -441,7 +441,12 @@ export interface BetPlacementResult {
 export class BetDialogComponent implements OnInit {
   betForm: FormGroup;
   selectedPrediction: 'home' | 'draw' | 'away';
-  quickStakeAmounts = [5, 10, 20, 50, 100];
+  confidenceLevels = [
+    { value: 3, label: 'Unsure' },
+    { value: 5, label: 'Moderate' },
+    { value: 7, label: 'Confident' },
+    { value: 10, label: 'Certain' }
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -451,34 +456,28 @@ export class BetDialogComponent implements OnInit {
     this.selectedPrediction = data.selectedPrediction;
     
     this.betForm = this.fb.group({
-      stake: [10, [Validators.required, Validators.min(1), Validators.max(1000)]]
+      confidence: [5, [Validators.required, Validators.min(1), Validators.max(10)]]
     });
   }
 
   ngOnInit(): void {
-    // Auto-focus on stake input after a brief delay
-    setTimeout(() => {
-      const stakeInput = document.querySelector('input[formControlName="stake"]') as HTMLInputElement;
-      if (stakeInput) {
-        stakeInput.focus();
-        stakeInput.select();
-      }
-    }, 300);
+    // Component is ready - confidence slider is automatically interactive
+    console.log('Prediction dialog ready');
   }
 
   selectPrediction(prediction: 'home' | 'draw' | 'away'): void {
     this.selectedPrediction = prediction;
   }
 
-  setStake(amount: number): void {
-    this.betForm.patchValue({ stake: amount });
+  setConfidence(level: number): void {
+    this.betForm.patchValue({ confidence: level });
   }
 
   onSliderChange(event: any): void {
-    this.betForm.patchValue({ stake: event.value });
+    this.betForm.patchValue({ confidence: event.value });
   }
 
-  isValidBet(): boolean {
+  isValidPrediction(): boolean {
     return this.betForm.valid && this.selectedPrediction !== null;
   }
 
@@ -499,25 +498,28 @@ export class BetDialogComponent implements OnInit {
     }
   }
 
-  calculatePotentialWin(): number {
-    const stake = this.betForm.get('stake')?.value || 0;
+  calculatePotentialPoints(): number {
+    const confidence = this.betForm.get('confidence')?.value || 1;
     const odds = this.getSelectedOdds();
-    return stake * odds;
+    // Points = confidence * odds * 10 (base multiplier)
+    return Math.round(confidence * odds * 10);
   }
 
-  calculateNetProfit(): number {
-    const stake = this.betForm.get('stake')?.value || 0;
-    return this.calculatePotentialWin() - stake;
+  getConfidenceLabel(): string {
+    const confidence = this.betForm.get('confidence')?.value || 1;
+    if (confidence <= 3) return '🤔';
+    if (confidence <= 5) return '😐';
+    if (confidence <= 7) return '😊';
+    return '💪';
   }
 
-  onPlaceBet(): void {
-    if (this.isValidBet()) {
+  onMakePrediction(): void {
+    if (this.isValidPrediction()) {
       const result: BetPlacementResult = {
         matchId: this.data.match.id,
         prediction: this.selectedPrediction,
         odds: this.getSelectedOdds(),
-        stake: this.betForm.get('stake')?.value,
-        potentialWin: this.calculatePotentialWin()
+        confidence: this.betForm.get('confidence')?.value
       };
 
       this.dialogRef.close(result);
