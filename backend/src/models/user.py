@@ -574,6 +574,38 @@ class User(Base):
         self.terms_accepted = True
         self.terms_accepted_at = datetime.now(timezone.utc)
     
+    # Betting statistics methods
+    def get_total_bets(self) -> int:
+        """Get total number of bets placed by user."""
+        return self.bets.count()
+    
+    def get_total_winnings(self) -> float:
+        """Get total winnings from all settled bets."""
+        total = 0.0
+        for bet in self.bets:
+            if hasattr(bet, 'status') and hasattr(bet, 'payout_amount'):
+                if bet.status == 'won' and bet.payout_amount:
+                    total += float(bet.payout_amount)
+        return total
+    
+    def calculate_win_rate(self) -> float:
+        """Calculate user's win rate as percentage."""
+        settled_bets = []
+        won_bets = 0
+        
+        for bet in self.bets:
+            if hasattr(bet, 'status'):
+                if bet.status in ['won', 'lost']:
+                    settled_bets.append(bet)
+                    if bet.status == 'won':
+                        won_bets += 1
+        
+        total_settled = len(settled_bets)
+        if total_settled == 0:
+            return 0.0
+        
+        return round((won_bets / total_settled) * 100, 2)
+    
     # Utility methods
     def to_dict(self, include_sensitive: bool = False, include_relationships: bool = False) -> Dict[str, Any]:
         """
@@ -612,6 +644,13 @@ class User(Base):
     audit_logs = relationship(
         "AuditLog",
         foreign_keys="AuditLog.user_id",
+        lazy="dynamic",
+        cascade="all, delete-orphan"
+    )
+    
+    bets = relationship(
+        "Bet",
+        foreign_keys="Bet.user_id",
         lazy="dynamic",
         cascade="all, delete-orphan"
     )

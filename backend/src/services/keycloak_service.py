@@ -43,6 +43,7 @@ class KeycloakService:
         # Use KEYCLOAK_URL as fallback for internal communication (Docker service-to-service)
         self.internal_server_url = os.getenv("KEYCLOAK_INTERNAL_URL", self.server_url)
         self.realm_name = os.getenv("KEYCLOAK_REALM", "betting-platform")
+        # Backend should validate tokens intended for the API, not the frontend client
         self.client_id = os.getenv("KEYCLOAK_CLIENT_ID", "betting-api")
         self.client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
         
@@ -236,10 +237,14 @@ class KeycloakService:
             if not public_key:
                 raise ValueError("Public key not found for token")
             
-            # First, decode token without validation to see the issuer
+            # First, decode token without validation to see the issuer and audience
             unverified_token = jwt.get_unverified_claims(access_token)
             actual_issuer = unverified_token.get("iss")
+            actual_audience = unverified_token.get("aud")
             logger.info(f"Token issuer: {actual_issuer}")
+            logger.info(f"Token audience: {actual_audience}")
+            logger.info(f"Token subject: {unverified_token.get('sub')}")
+            logger.info(f"Token client_id: {unverified_token.get('azp')} or {unverified_token.get('client_id')}")
             
             # Expected issuers (try both internal and external URLs)
             expected_issuers = [
@@ -251,7 +256,13 @@ class KeycloakService:
             logger.info(f"Expected issuers: {expected_issuers}")
             
             # Try validation with different issuers and audiences
-            valid_audiences = [self.client_id, "account"]  # Accept both client_id and default "account"
+            # Accept tokens from frontend client, API client, and default account audience
+            valid_audiences = [
+                "betting-frontend",  # Frontend SPA client (token originator)
+                "betting-api",       # Backend API client (preferred audience)
+                "account",           # Default Keycloak audience
+                self.client_id       # Current client_id (flexible)
+            ]
             token_info = None
             
             for expected_issuer in expected_issuers:
@@ -429,19 +440,20 @@ class KeycloakService:
                 
                 if user:
                     # Update existing user with Keycloak ID - only update non-conflicting fields
-                    # Don't update email if it would cause a constraint violation
-                    existing_email_user = db.query(User).filter(
-                        User.email == email,
-                        User.id != user.id
-                    ).first()
+                    # Don't update email if it would cause a constraint violation or if email is None
+                    if email:
+                        existing_email_user = db.query(User).filter(
+                            User.email == email,
+                            User.id != user.id
+                        ).first()
+                        
+                        if not existing_email_user:
+                            user.email = email
+                        else:
+                            logger.warning(f"Email {email} already exists for another user, skipping email update")
                     
-                    if not existing_email_user:
-                        user.email = email
-                    else:
-                        logger.warning(f"Email {email} already exists for another user, skipping email update")
-                    
-                    user.first_name = first_name
-                    user.last_name = last_name
+                    user.first_name = first_name or user.first_name or "Unknown"
+                    user.last_name = last_name or user.last_name or "User"
                     user.role = "admin" if is_admin else "user"
                     user.is_active = True
                     
@@ -454,19 +466,20 @@ class KeycloakService:
                         # Link existing user to Keycloak
                         user.keycloak_id = keycloak_user_id
                         
-                        # Only update email if it won't cause a constraint violation
-                        existing_email_user = db.query(User).filter(
-                            User.email == email,
-                            User.id != user.id
-                        ).first()
+                        # Only update email if it won't cause a constraint violation and email is not None
+                        if email:
+                            existing_email_user = db.query(User).filter(
+                                User.email == email,
+                                User.id != user.id
+                            ).first()
+                            
+                            if not existing_email_user:
+                                user.email = email
+                            else:
+                                logger.warning(f"Email {email} already exists for another user, keeping original email {user.email}")
                         
-                        if not existing_email_user:
-                            user.email = email
-                        else:
-                            logger.warning(f"Email {email} already exists for another user, keeping original email {user.email}")
-                        
-                        user.first_name = first_name
-                        user.last_name = last_name
+                        user.first_name = first_name or user.first_name or "Unknown"
+                        user.last_name = last_name or user.last_name or "User"
                         user.role = "admin" if is_admin else "user"
                         user.is_active = True
                         
@@ -475,12 +488,15 @@ class KeycloakService:
                         # Create new user
                         display_name = f"{first_name} {last_name}".strip() or username
                         
+                        # Ensure email is not None - generate fallback if missing
+                        user_email = email if email else f"{username}@keycloak.local"
+                        
                         user = User(
                             keycloak_id=keycloak_user_id,
                             username=username,
-                            email=email,
-                            first_name=first_name,
-                            last_name=last_name,
+                            email=user_email,
+                            first_name=first_name or "Unknown",
+                            last_name=last_name or "User",
                             display_name=display_name,
                             date_of_birth=datetime(1990, 1, 1, tzinfo=timezone.utc),  # Default date
                             password_hash=self._get_safe_password_hash(),  # Get safe password hash
