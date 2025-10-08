@@ -220,6 +220,10 @@ class Season(Base):
         Index('ix_seasons_sport_year', 'sport_id', 'year'),
     )
     
+    # Relationships
+    sport = relationship("Sport", back_populates="seasons")
+    competitions = relationship("Competition", back_populates="season")
+    
     def __init__(self, **kwargs):
         """Initialize Season with proper defaults for TDD testing."""
         # Validate required fields before processing

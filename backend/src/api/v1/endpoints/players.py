@@ -14,7 +14,8 @@ from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
+from core.keycloak_security import get_current_user_hybrid
 from models import User, Player, Team, Sport
 from api.schemas.player import (
     PlayerCreate,
@@ -46,7 +47,7 @@ router = APIRouter()
 async def create_player(
     player_data: PlayerCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> PlayerResponse:
     """
     Create a new player.
@@ -414,7 +415,7 @@ async def update_player(
     player_id: UUID,
     update_data: PlayerUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> PlayerResponse:
     """
     Update player.
@@ -450,7 +451,7 @@ async def update_player_contract(
     player_id: UUID,
     contract_data: PlayerContractUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> PlayerResponse:
     """
     Update player contract.
@@ -487,7 +488,7 @@ async def transfer_player(
     player_id: UUID,
     transfer_data: PlayerTransferCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> PlayerTransferResponse:
     """
     Transfer player to new team.
@@ -522,7 +523,7 @@ async def transfer_player(
 async def set_captain(
     player_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> PlayerResponse:
     """
     Set player as captain.
@@ -556,7 +557,7 @@ async def set_captain(
 async def set_vice_captain(
     player_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> PlayerResponse:
     """
     Set player as vice-captain.
@@ -590,7 +591,7 @@ async def set_vice_captain(
 async def remove_captaincy(
     player_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> PlayerResponse:
     """
     Remove captaincy from player.
@@ -624,7 +625,7 @@ async def remove_captaincy(
 async def delete_player(
     player_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> None:
     """
     Delete player (soft delete).

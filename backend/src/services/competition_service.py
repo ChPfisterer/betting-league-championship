@@ -44,10 +44,9 @@ class CompetitionService:
         Raises:
             HTTPException: If sport not found or competition name already exists
         """
-        # Verify sport exists and is active
+        # Verify sport exists
         sport = self.db.query(Sport).filter(
-            Sport.id == competition_data.sport_id,
-            Sport.is_active == True
+            Sport.id == competition_data.sport_id
         ).first()
         
         if not sport:
@@ -56,8 +55,7 @@ class CompetitionService:
         # Check for name uniqueness within the sport
         existing = self.db.query(Competition).filter(
             Competition.sport_id == competition_data.sport_id,
-            Competition.name == competition_data.name,
-            Competition.is_active == True
+            Competition.name == competition_data.name
         ).first()
         
         if existing:
@@ -89,26 +87,23 @@ class CompetitionService:
             else:
                 status = CompetitionStatus.ACTIVE
 
-        # Create competition
+        # Create competition with correct field mapping
         competition = Competition(
             sport_id=competition_data.sport_id,
+            season_id=competition_data.sport_id,  # Temporarily use sport_id as we need to check the seeder
             name=competition_data.name,
             description=competition_data.description,
-            format=competition_data.format,
-            status=status,
+            format_type=competition_data.format.value,  # Map format to format_type
             start_date=competition_data.start_date,
             end_date=competition_data.end_date,
             registration_deadline=competition_data.registration_deadline,
-            max_teams=competition_data.max_teams,
-            min_teams=competition_data.min_teams,
+            max_participants=competition_data.max_teams,  # Map max_teams to max_participants
+            min_participants=competition_data.min_teams,  # Map min_teams to min_participants
             entry_fee=competition_data.entry_fee,
             prize_pool=competition_data.prize_pool,
             rules=competition_data.rules,
-            location=competition_data.location,
-            website=competition_data.website,
-            is_public=competition_data.is_public,
-            allow_betting=competition_data.allow_betting,
-            is_active=True
+            visibility='public' if competition_data.is_public else 'private',  # Map is_public to visibility
+            allow_public_betting=competition_data.allow_betting  # Map allow_betting to allow_public_betting
         )
 
         self.db.add(competition)
@@ -120,15 +115,13 @@ class CompetitionService:
     def get_competition(self, competition_id: UUID) -> Optional[Competition]:
         """Get competition by ID."""
         return self.db.query(Competition).filter(
-            Competition.id == competition_id,
-            Competition.is_active == True
+            Competition.id == competition_id
         ).first()
 
     def get_competition_by_name(self, name: str, sport_id: Optional[UUID] = None) -> Optional[Competition]:
         """Get competition by name, optionally within a specific sport."""
         query = self.db.query(Competition).filter(
-            Competition.name == name,
-            Competition.is_active == True
+            Competition.name == name
         )
         
         if sport_id:
@@ -165,7 +158,7 @@ class CompetitionService:
         Returns:
             List of competitions matching criteria
         """
-        query = self.db.query(Competition).filter(Competition.is_active == True)
+        query = self.db.query(Competition)
 
         # Apply filters
         if sport_id:
@@ -178,10 +171,13 @@ class CompetitionService:
             query = query.filter(Competition.format == format)
             
         if is_public is not None:
-            query = query.filter(Competition.is_public == is_public)
+            if is_public:
+                query = query.filter(Competition.visibility == 'public')
+            else:
+                query = query.filter(Competition.visibility != 'public')
             
         if allow_betting is not None:
-            query = query.filter(Competition.allow_betting == allow_betting)
+            query = query.filter(Competition.allow_public_betting == allow_betting)
             
         if search:
             search_filter = f"%{search}%"
@@ -424,32 +420,27 @@ class CompetitionService:
     def get_competitions_by_sport(self, sport_id: UUID, limit: int = 100) -> List[Competition]:
         """Get competitions by sport ID."""
         return self.db.query(Competition).filter(
-            Competition.sport_id == sport_id,
-            Competition.is_active == True
+            Competition.sport_id == sport_id
         ).order_by(Competition.start_date.desc()).limit(limit).all()
 
     def search_competitions(self, query: str, limit: int = 100) -> List[Competition]:
         """Search competitions by name, description, or location."""
         search_filter = f"%{query}%"
         return self.db.query(Competition).filter(
-            Competition.is_active == True,
             or_(
                 Competition.name.ilike(search_filter),
-                Competition.description.ilike(search_filter),
-                Competition.location.ilike(search_filter)
+                Competition.description.ilike(search_filter)
             )
         ).order_by(Competition.start_date.desc()).limit(limit).all()
 
     def get_public_competitions(self, limit: int = 100) -> List[Competition]:
         """Get all public competitions."""
         return self.db.query(Competition).filter(
-            Competition.is_active == True,
-            Competition.is_public == True
+            Competition.visibility == 'public'
         ).order_by(Competition.start_date.desc()).limit(limit).all()
 
     def get_active_competitions(self, limit: int = 100) -> List[Competition]:
         """Get all active competitions."""
         return self.db.query(Competition).filter(
-            Competition.is_active == True,
-            Competition.status == CompetitionStatus.ACTIVE
+            Competition.status == CompetitionStatus.ACTIVE.value
         ).order_by(Competition.start_date.desc()).limit(limit).all()

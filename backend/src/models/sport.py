@@ -166,6 +166,11 @@ class Sport(Base):
         Index('ix_sports_created_at', 'created_at'),
     )
     
+    # Relationships
+    teams = relationship("Team", back_populates="sport")
+    competitions = relationship("Competition", back_populates="sport")
+    seasons = relationship("Season", back_populates="sport")
+    
     def __init__(self, **kwargs):
         """Initialize Sport with proper defaults for TDD testing."""
         # Set default values for testing if not provided

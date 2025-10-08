@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, throwError, of } from 'rxjs';
 import { map, tap, catchError, switchMap } from 'rxjs/operators';
 import { jwtDecode } from 'jwt-decode';
 import { environment } from '../../../environments/environment';
@@ -51,18 +51,33 @@ export class AuthService {
    * Initialize authentication state from stored tokens
    */
   private initializeAuthState(): void {
+    console.log('AuthService: Initializing auth state...');
     const token = this.getAccessToken();
-    if (token && !this.isTokenExpired(token)) {
-      this.loadUserInfo().subscribe({
-        next: (user) => {
-          this.currentUserSubject.next(user);
-          this.isAuthenticatedSubject.next(true);
-        },
-        error: () => {
-          this.clearTokens();
-        }
-      });
+    
+    if (!token) {
+      console.log('AuthService: No token found during initialization');
+      return;
     }
+    
+    console.log('AuthService: Token found, checking if expired...');
+    if (this.isTokenExpired(token)) {
+      console.log('AuthService: Token is expired, clearing...');
+      this.clearTokens();
+      return;
+    }
+    
+    console.log('AuthService: Valid token found, loading user info...');
+    this.loadUserInfo().subscribe({
+      next: (user) => {
+        console.log('AuthService: User info loaded successfully:', user);
+        this.currentUserSubject.next(user);
+        this.isAuthenticatedSubject.next(true);
+      },
+      error: (error) => {
+        console.error('AuthService: Failed to load user info:', error);
+        this.clearTokens();
+      }
+    });
   }
 
   /**
@@ -76,6 +91,31 @@ export class AuthService {
       },
       error: (error) => {
         console.error('Failed to get authorization URL:', error);
+      }
+    });
+  }
+
+  /**
+   * Initiate Keycloak OAuth flow
+   */
+  initiateKeycloakLogin(): void {
+    this.login();
+  }
+
+  /**
+   * Initiate Keycloak registration flow
+   */
+  initiateKeycloakRegistration(): void {
+    this.getAuthorizationUrl().subscribe({
+      next: (response) => {
+        // Add registration parameter to redirect to Keycloak registration page
+        const registrationUrl = response.authorize_url.replace('/auth?', '/registrations?');
+        window.location.href = registrationUrl;
+      },
+      error: (error) => {
+        console.error('Failed to get registration URL:', error);
+        // Fallback to regular login flow
+        this.login();
       }
     });
   }
@@ -103,42 +143,123 @@ export class AuthService {
   }
 
   /**
-   * Logout user
+   * Logout user from both application and Keycloak - FORCE complete logout
    */
   logout(): Observable<any> {
-    const refreshToken = this.getRefreshToken();
+    console.log('AuthService: Starting COMPLETE logout...');
     
-    if (refreshToken) {
-      return this.http.post(`${this.API_URL}/auth/keycloak/oauth/logout`, {
-        refresh_token: refreshToken
-      }).pipe(
-        tap(() => {
-          this.performLogout();
-        }),
-        catchError(() => {
-          this.performLogout();
-          return throwError(() => 'Logout failed');
-        })
-      );
-    } else {
-      this.performLogout();
-      return new Observable(observer => {
-        observer.next(null);
-        observer.complete();
-      });
+    // Always perform local cleanup first
+    this.performLogout();
+    
+    // ALWAYS redirect to Keycloak logout to ensure SSO session ends
+    // This is the only way to guarantee complete logout from Keycloak
+    this.forceKeycloakLogout();
+    
+    return new Observable(observer => {
+      observer.next(null);
+      observer.complete();
+    });
+  }
+
+  /**
+   * Force complete Keycloak logout that ends SSO session
+   */
+  private forceKeycloakLogout(): void {
+    const keycloakLogoutUrl = `${environment.keycloak.url}/realms/${environment.keycloak.realm}/protocol/openid-connect/logout`;
+    const redirectUri = `${window.location.origin}/login`;
+    
+    // Get access token to use as hint
+    const accessToken = this.getAccessToken();
+    
+    // Build logout URL with parameters for ending SSO session
+    const params = new URLSearchParams({
+      'client_id': environment.keycloak.clientId,
+      'post_logout_redirect_uri': redirectUri
+    });
+    
+    // Add session_state and id_token_hint if available to help Keycloak identify session
+    if (accessToken) {
+      // Use access token as hint (Keycloak may accept this)
+      params.append('id_token_hint', accessToken);
     }
+    
+    // Add additional parameter to help ensure complete logout
+    params.append('logout', 'true');
+    
+    const logoutUrl = `${keycloakLogoutUrl}?${params.toString()}`;
+    
+    console.log('AuthService: Forcing complete Keycloak SSO logout:', logoutUrl);
+    
+    // Clear any Keycloak-related cookies before redirect
+    this.clearKeycloakCookies();
+    
+    // Redirect to Keycloak logout
+    window.location.href = logoutUrl;
+  }
+
+  /**
+   * Clear Keycloak-related cookies to help ensure clean logout
+   */
+  private clearKeycloakCookies(): void {
+    // Clear common Keycloak session cookies
+    const cookiesToClear = [
+      'KEYCLOAK_SESSION',
+      'KEYCLOAK_SESSION_LEGACY',
+      'KEYCLOAK_IDENTITY',
+      'KEYCLOAK_IDENTITY_LEGACY',
+      'AUTH_SESSION_ID',
+      'AUTH_SESSION_ID_LEGACY'
+    ];
+    
+    cookiesToClear.forEach(cookieName => {
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}`;
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${window.location.hostname}`;
+    });
+  }
+
+  /**
+   * Redirect to Keycloak logout endpoint with maximum automation
+   */
+  private logoutFromKeycloak(): void {
+    const keycloakLogoutUrl = `${environment.keycloak.url}/realms/${environment.keycloak.realm}/protocol/openid-connect/logout`;
+    const redirectUri = `${window.location.origin}/login`;
+    
+    // Get the access token for logout hint
+    const accessToken = this.getAccessToken();
+    
+    // Build logout URL with parameters for maximum automation
+    const params = new URLSearchParams({
+      'client_id': environment.keycloak.clientId,
+      'post_logout_redirect_uri': redirectUri,
+      'redirect_uri': redirectUri  // Some Keycloak versions prefer this
+    });
+    
+    // Add token hint if available for automatic logout
+    if (accessToken) {
+      params.append('id_token_hint', accessToken);
+    }
+    
+    const logoutUrl = `${keycloakLogoutUrl}?${params.toString()}`;
+    
+    console.log('AuthService: Redirecting to Keycloak logout (should be automatic):', logoutUrl);
+    
+    // Redirect to Keycloak logout
+    window.location.href = logoutUrl;
   }
 
   /**
    * Refresh access token
    */
   refreshToken(): Observable<TokenResponse> {
+    console.log('AuthService: Attempting token refresh...');
     const refreshToken = this.getRefreshToken();
     
     if (!refreshToken) {
+      console.error('AuthService: No refresh token available');
       return throwError(() => 'No refresh token available');
     }
 
+    console.log('AuthService: Found refresh token, making request to Keycloak');
     const body = new URLSearchParams({
       grant_type: 'refresh_token',
       client_id: environment.keycloak.clientId,
@@ -154,12 +275,15 @@ export class AuthService {
       body.toString(),
       { headers }
     ).pipe(
-      map((response: any) => ({
-        access_token: response.access_token,
-        refresh_token: response.refresh_token,
-        expires_in: response.expires_in,
-        token_type: response.token_type
-      })),
+      map((response: any) => {
+        console.log('AuthService: Token refresh successful');
+        return {
+          access_token: response.access_token,
+          refresh_token: response.refresh_token,
+          expires_in: response.expires_in,
+          token_type: response.token_type
+        };
+      }),
       tap((tokenResponse) => {
         this.storeTokens(tokenResponse);
       }),
@@ -303,34 +427,79 @@ export class AuthService {
       return throwError(() => 'No access token available');
     }
 
-    try {
-      const decoded: any = jwtDecode(token);
-      
-      const user: User = {
-        id: decoded.sub || '',
-        username: decoded.preferred_username || decoded.username || '',
-        email: decoded.email || '',
-        firstName: decoded.given_name || '',
-        lastName: decoded.family_name || '',
-        roles: decoded.realm_access?.roles || [],
-        isAdmin: decoded.realm_access?.roles?.includes('admin') || false
-      };
+    // Call the backend API to get the actual user data with UUID
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
 
-      return new Observable(observer => {
-        observer.next(user);
-        observer.complete();
-      });
-    } catch (error) {
-      return throwError(() => 'Invalid access token');
-    }
+    console.log('AuthService: Fetching user profile from API...');
+    console.log('AuthService: API URL:', `${this.API_URL}/users/me`);
+    console.log('AuthService: Authorization header present:', !!headers.Authorization);
+    
+    return this.http.get<any>(`${this.API_URL}/users/me`, { headers }).pipe(
+      tap(userProfile => {
+        console.log('AuthService: Raw API response from /users/me:', userProfile);
+      }),
+      map(userProfile => {
+        console.log('AuthService: Received user profile from API:', userProfile);
+        
+        // Also decode JWT for additional role information
+        let jwtRoles: string[] = [];
+        let isAdmin = false;
+        
+        try {
+          const decoded: any = jwtDecode(token);
+          jwtRoles = decoded.realm_access?.roles || [];
+          isAdmin = jwtRoles.includes('admin') || false;
+          console.log('AuthService: JWT decoded successfully, roles:', jwtRoles);
+        } catch (error) {
+          console.warn('AuthService: Could not decode JWT for roles:', error);
+        }
+        
+        const user: User = {
+          id: userProfile.id, // This is the actual UUID from the database
+          username: userProfile.username,
+          email: userProfile.email,
+          firstName: userProfile.first_name || '',
+          lastName: userProfile.last_name || '',
+          roles: jwtRoles,
+          isAdmin: isAdmin
+        };
+
+        console.log('AuthService: Created user object with real UUID:', user);
+        console.log('AuthService: User ID from API:', userProfile.id);
+        console.log('AuthService: User ID type:', typeof userProfile.id);
+        return user;
+      }),
+      catchError(error => {
+        console.error('AuthService: Failed to fetch user profile:', error);
+        console.error('AuthService: Error status:', error.status);
+        console.error('AuthService: Error details:', error.error);
+        
+        // Always fail if we can't get user info from backend
+        // This ensures we have the correct database UUID
+        if (error.status === 401 || error.status === 403) {
+          console.error('AuthService: Authentication failed, clearing tokens and redirecting to login');
+          this.clearTokens();
+          return throwError(() => 'Authentication failed - please login again');
+        }
+        
+        // For other errors (500, network issues), also fail but with different message
+        console.error('AuthService: Backend API error, cannot proceed without user profile');
+        return throwError(() => 'Authentication service error - please try again later');
+      })
+    );
   }
 
   private performLogout(): void {
+    console.log('AuthService: Performing logout cleanup...');
     this.clearTokens();
     this.clearAuthState();
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
-    this.router.navigate(['/']);
+    console.log('AuthService: Logout cleanup complete');
+    // Note: Navigation is handled by the calling component
   }
 
   private storeTokens(tokenResponse: TokenResponse): void {
@@ -360,8 +529,59 @@ export class AuthService {
     localStorage.removeItem('auth_state');
   }
 
+  /**
+   * Force refresh user info from backend API
+   */
+  refreshUserInfo(): Observable<User> {
+    console.log('AuthService: Force refreshing user info...');
+    return this.loadUserInfo().pipe(
+      tap((user) => {
+        console.log('AuthService: Force refresh completed, updating current user:', user);
+        this.currentUserSubject.next(user);
+      })
+    );
+  }
+
   getAccessToken(): string | null {
-    return localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
+    
+    if (!token) {
+      console.log('AuthService: No access token found in localStorage');
+      return null;
+    }
+    
+    // Check if token is expired
+    if (this.isTokenExpired(token)) {
+      console.log('AuthService: Access token is expired');
+      return null;
+    }
+    
+    console.log('AuthService: Valid access token found');
+    return token;
+  }
+
+  hasValidToken(): boolean {
+    const token = this.getAccessToken();
+    return token !== null;
+  }
+
+  /**
+   * Get current authentication status with detailed logging
+   */
+  getAuthStatus(): { authenticated: boolean; hasToken: boolean; tokenValid: boolean; user: User | null } {
+    const hasToken = !!localStorage.getItem('access_token');
+    const tokenValid = this.hasValidToken();
+    const user = this.currentUserSubject.value;
+    const authenticated = this.isAuthenticatedSubject.value;
+    
+    console.log('AuthService: Current auth status:', {
+      authenticated,
+      hasToken,
+      tokenValid,
+      user: user ? 'Present' : 'None'
+    });
+    
+    return { authenticated, hasToken, tokenValid, user };
   }
 
   private getRefreshToken(): string | null {

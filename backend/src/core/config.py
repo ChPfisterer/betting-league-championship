@@ -18,10 +18,10 @@ class Settings(BaseSettings):
     # Application
     app_name: str = "Multi-Sport Betting Platform API"
     app_version: str = "1.0.0"
-    debug: bool = False
+    debug: bool = True  # Enable debug mode for development
     
     # Database
-    database_url: str = "postgresql://user:password@localhost:5432/betting_league_championship"
+    database_url: str = "postgresql://postgres:postgres123@localhost:5432/betting_championship"
     database_echo: bool = False
     
     # API

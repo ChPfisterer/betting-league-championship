@@ -12,7 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
 from models import User, Team, Sport
 from api.schemas.team import (
     TeamCreate,
@@ -32,7 +32,6 @@ from sqlalchemy.orm import Session
 
 from core import (
     get_db,
-    get_current_user_id,
     http_not_found,
     http_validation_error,
     PaginationParams,
@@ -41,6 +40,7 @@ from core import (
     ValidationError,
     NotFoundError
 )
+from core.keycloak_security import get_current_user_id_hybrid
 from api.schemas.team import (
     TeamCreate,
     TeamUpdate,
@@ -64,7 +64,7 @@ router = APIRouter()
 async def create_team(
     team_data: TeamCreate,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> TeamResponse:
     """Create a new team."""
     try:
@@ -201,7 +201,7 @@ async def update_team(
     team_id: UUID,
     team_update: TeamUpdate,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> TeamResponse:
     """Update team information."""
     try:
@@ -222,7 +222,7 @@ async def update_team(
 async def delete_team(
     team_id: UUID,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> None:
     """Delete (deactivate) team."""
     try:
@@ -240,7 +240,7 @@ async def delete_team(
 async def activate_team(
     team_id: UUID,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> TeamResponse:
     """Activate a team."""
     try:
@@ -259,7 +259,7 @@ async def activate_team(
 async def deactivate_team(
     team_id: UUID,
     db: Session = Depends(get_db),
-    _: UUID = Depends(get_current_user_id)  # Require authentication
+    _: UUID = Depends(get_current_user_id_hybrid)  # Require authentication
 ) -> TeamResponse:
     """Deactivate a team."""
     try:

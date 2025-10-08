@@ -50,6 +50,47 @@
 .user-greeting {
   color: #666;
   font-size: 14px;
+  margin-right: 8px;
+}
+
+.user-menu-trigger {
+  color: #3f51b5;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.user-avatar {
+  background: #3f51b5;
+  color: white;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.user-email {
+  color: #666;
+  font-size: 12px;
 }
 
 .app-content {

@@ -1,9 +1,11 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
+import { RouterOutlet, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from './core/auth/auth.service';
 
 @Component({
@@ -13,7 +15,9 @@ import { AuthService } from './core/auth/auth.service';
     RouterOutlet,
     MatToolbarModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    MatMenuModule,
+    MatDividerModule
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.scss'
@@ -21,7 +25,10 @@ import { AuthService } from './core/auth/auth.service';
 export class App {
   title = 'Betting League Championship';
   
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private router: Router
+  ) {}
 
   get isAuthenticated$() {
     return this.authService.isAuthenticated$;
@@ -31,7 +38,32 @@ export class App {
     return this.authService.currentUser$;
   }
 
+  viewProfile(): void {
+    this.router.navigate(['/profile']);
+  }
+
+  viewBettingHistory(): void {
+    // TODO: Navigate to betting history
+    console.log('Navigate to betting history');
+  }
+
+  viewSettings(): void {
+    // TODO: Navigate to settings
+    console.log('Navigate to settings');
+  }
+
   logout(): void {
-    this.authService.logout().subscribe();
+    console.log('App: Starting logout...');
+    this.authService.logout().subscribe({
+      next: () => {
+        console.log('App: Logout initiated (Keycloak will handle redirect)');
+        // Note: No manual navigation needed, Keycloak will redirect back to login
+      },
+      error: (error) => {
+        console.error('App: Logout error:', error);
+        // Fallback: redirect to login if something goes wrong
+        this.router.navigate(['/login']);
+      }
+    });
   }
 }

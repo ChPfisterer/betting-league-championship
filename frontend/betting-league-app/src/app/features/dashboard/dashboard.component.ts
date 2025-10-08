@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,64 +9,17 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../core/auth/auth.service';
+import { DashboardService, DashboardMatch, DashboardBet, DashboardStats, DashboardLeague } from '../../core/services/dashboard.service';
+import { ApiService } from '../../core/services/api.service';
+import { Subscription } from 'rxjs';
 
-interface League {
-  id: string;
-  name: string;
-  sport: string;
-  country: string;
-  icon: string;
-  season: string;
-  matchCount: number;
-}
-
-interface Match {
-  id: string;
-  leagueId: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeTeamLogo: string;
-  awayTeamLogo: string;
-  kickoff: Date;
-  status: 'upcoming' | 'live' | 'finished';
-  homeScore?: number;
-  awayScore?: number;
-  odds: {
-    home: number;
-    draw: number;
-    away: number;
-  };
-  liveData?: {
-    minute: number;
-    possession: { home: number; away: number };
-  };
-}
-
-interface UserStats {
-  totalBets: number;
-  activeBets: number;
-  wins: number;
-  losses: number;
-  winRate: number;
-  totalStake: number;
-  totalWinnings: number;
-  profit: number;
-  currentRank: number;
-  totalUsers: number;
-}
-
-interface Bet {
-  id: string;
-  matchId: string;
-  match: string;
-  prediction: string;
-  odds: number;
-  stake: number;
-  potentialWin: number;
-  status: 'pending' | 'won' | 'lost';
-  placedAt: Date;
-}
+// Use interfaces from dashboard service instead of local ones
+interface League extends DashboardLeague {}
+interface Match extends DashboardMatch {}
+interface UserStats extends DashboardStats {}
+interface Bet extends DashboardBet {}
 
 @Component({
   selector: 'app-dashboard',
@@ -81,7 +34,8 @@ interface Bet {
     MatProgressBarModule,
     MatBadgeModule,
     MatDividerModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSnackBarModule
   ],
   template: `
     <div class="dashboard-container">
@@ -727,8 +681,9 @@ interface Bet {
     }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   currentUser: any = null;
+  private subscriptions: Subscription[] = [];
   
   // Mock data - In a real app, this would come from services
   leagues: League[] = [
@@ -843,41 +798,7 @@ export class DashboardComponent implements OnInit {
     }
   ];
 
-  userBets: Bet[] = [
-    {
-      id: '1',
-      matchId: '1',
-      match: 'Manchester United vs Liverpool',
-      prediction: 'Liverpool Win',
-      odds: 3.8,
-      stake: 25,
-      potentialWin: 95,
-      status: 'pending',
-      placedAt: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago
-    },
-    {
-      id: '2',
-      matchId: '3',
-      match: 'Arsenal vs Chelsea',
-      prediction: 'Draw',
-      odds: 3.1,
-      stake: 50,
-      potentialWin: 155,
-      status: 'pending',
-      placedAt: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
-    },
-    {
-      id: '3',
-      matchId: 'finished-1',
-      match: 'AC Milan vs Inter Milan',
-      prediction: 'AC Milan Win',
-      odds: 2.4,
-      stake: 30,
-      potentialWin: 72,
-      status: 'won',
-      placedAt: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day ago
-    }
-  ];
+  userBets: Bet[] = []; // Will be loaded from API
 
   userStats: UserStats = {
     totalBets: 15,
@@ -892,18 +813,65 @@ export class DashboardComponent implements OnInit {
     totalUsers: 1247
   };
 
-  constructor(private authService: AuthService) {
+  constructor(
+    private authService: AuthService,
+    private apiService: ApiService,
+    private snackBar: MatSnackBar
+  ) {
     this.currentUser = this.authService.getCurrentUser();
   }
 
   ngOnInit(): void {
     // Subscribe to user changes
-    this.authService.currentUser$.subscribe((user: any) => {
+    const userSub = this.authService.currentUser$.subscribe((user: any) => {
       this.currentUser = user;
+      if (user?.id) {
+        this.loadUserBets(user.id);
+      }
     });
+    this.subscriptions.push(userSub);
 
-    // In a real app, you would load data here
-    // this.loadDashboardData();
+    // Load data for current user if available
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser?.id) {
+      this.loadUserBets(currentUser.id);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  private loadUserBets(userId: string): void {
+    const betsSub = this.apiService.getUserBets(userId, { limit: 10 }).subscribe({
+      next: (bets) => {
+        this.userBets = bets.map(bet => ({
+          id: bet.id,
+          matchId: bet.match_id,
+          match: `${bet.match?.home_team?.name || 'Team A'} vs ${bet.match?.away_team?.name || 'Team B'}`,
+          prediction: this.formatPrediction(bet.predicted_outcome),
+          odds: bet.odds,
+          stake: bet.stake_amount,
+          potentialWin: bet.potential_payout,
+          status: bet.status === 'void' ? 'lost' : bet.status as 'pending' | 'won' | 'lost',
+          placedAt: new Date(bet.placed_at)
+        }));
+      },
+      error: (error) => {
+        console.error('Error loading user bets:', error);
+        this.snackBar.open('Failed to load your bets', 'Close', { duration: 3000 });
+      }
+    });
+    this.subscriptions.push(betsSub);
+  }
+
+  private formatPrediction(selection: string): string {
+    switch (selection) {
+      case 'home': return 'Home Win';
+      case 'away': return 'Away Win';
+      case 'draw': return 'Draw';
+      default: return selection;
+    }
   }
 
   getCurrentTime(): string {

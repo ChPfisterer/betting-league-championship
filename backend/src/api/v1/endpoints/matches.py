@@ -13,7 +13,8 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from core import get_db, get_current_user, http_not_found, http_conflict
+from core import get_db, http_not_found, http_conflict
+from core.keycloak_security import get_current_user_hybrid
 from models import User, Match, Team, Competition
 from api.schemas.match import (
     MatchCreate,
@@ -44,7 +45,7 @@ router = APIRouter()
 async def create_match(
     match_data: MatchCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> MatchResponse:
     """
     Create a new match.
@@ -67,9 +68,9 @@ async def create_match(
 
 @router.get(
     "/",
-    response_model=List[MatchSummary],
+    response_model=List[MatchWithTeams],
     summary="List Matches",
-    description="List matches with comprehensive filtering options"
+    description="List matches with comprehensive filtering options and team details"
 )
 async def list_matches(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -84,7 +85,7 @@ async def list_matches(
     venue_city: Optional[str] = Query(None, description="Filter by venue city"),
     allow_betting: Optional[bool] = Query(None, description="Filter by betting allowance"),
     db: Session = Depends(get_db)
-) -> List[MatchSummary]:
+) -> List[MatchWithTeams]:
     """
     List matches with filtering options.
     
@@ -103,7 +104,7 @@ async def list_matches(
         db: Database session
         
     Returns:
-        List of match summaries
+        List of matches with team details
     """
     service = MatchService(db)
     matches = service.list_matches(
@@ -119,7 +120,62 @@ async def list_matches(
         venue_city=venue_city,
         allow_betting=allow_betting
     )
-    return [MatchSummary.model_validate(match) for match in matches]
+    
+    # Transform matches to include team details
+    result = []
+    for match in matches:
+        # Create a basic match dict with available fields from actual database model
+        match_data = {
+            'id': match.id,
+            'competition_id': match.competition_id,
+            'season_id': None,  # Not available in current model
+            'home_team_id': match.home_team_id,
+            'away_team_id': match.away_team_id,
+            'scheduled_at': match.scheduled_at,
+            'venue': 'home',  # Default value since model has venue field but different structure
+            'venue_name': match.venue if match.venue else None,
+            'venue_city': None,  # Not available in current model
+            'venue_country': None,  # Not available in current model
+            'match_type': 'regular',  # Default value, not available in current model
+            'round_number': match.round_number,
+            'week_number': None,  # Not available in current model
+            'status': match.status,
+            'home_score': match.home_score,
+            'away_score': match.away_score,
+            'extra_time_home_score': getattr(match, 'extra_time_home_score', None),
+            'extra_time_away_score': getattr(match, 'extra_time_away_score', None),
+            'penalties_home_score': getattr(match, 'penalties_home_score', None),
+            'penalties_away_score': getattr(match, 'penalties_away_score', None),
+            'is_active': True,  # Default value, not available in current model
+            'allow_betting': True,  # Default value, not available in current model
+            'created_at': match.created_at,
+            'updated_at': match.updated_at
+        }
+        
+        # Add team details
+        if match.home_team:
+            match_data['home_team'] = {
+                'id': str(match.home_team.id),
+                'name': match.home_team.name,
+                'country': match.home_team.country,
+                'logo_url': match.home_team.logo_url
+            }
+        else:
+            match_data['home_team'] = {'id': str(match.home_team_id), 'name': 'Unknown Team'}
+            
+        if match.away_team:
+            match_data['away_team'] = {
+                'id': str(match.away_team.id),
+                'name': match.away_team.name,
+                'country': match.away_team.country,
+                'logo_url': match.away_team.logo_url
+            }
+        else:
+            match_data['away_team'] = {'id': str(match.away_team_id), 'name': 'Unknown Team'}
+        
+        result.append(MatchWithTeams.model_validate(match_data))
+    
+    return result
 
 
 @router.get(
@@ -442,7 +498,7 @@ async def update_match(
     match_id: UUID,
     update_data: MatchUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> MatchResponse:
     """
     Update match.
@@ -478,7 +534,7 @@ async def update_match_score(
     match_id: UUID,
     score_data: MatchScoreUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> MatchResponse:
     """
     Update match score.
@@ -514,7 +570,7 @@ async def update_match_status(
     match_id: UUID,
     status_data: MatchStatusUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> MatchResponse:
     """
     Update match status.
@@ -549,7 +605,7 @@ async def update_match_status(
 async def delete_match(
     match_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_hybrid)
 ) -> None:
     """
     Delete match (soft delete).

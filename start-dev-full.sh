@@ -112,8 +112,8 @@ start_backend() {
 
     print_status "Starting backend services (PostgreSQL, Keycloak, FastAPI, Adminer)..."
     
-    # Start services in detached mode
-    docker compose -f "$DOCKER_COMPOSE_FILE" up -d
+    # Start services in detached mode and rebuild backend image if changes occurred
+    docker compose -f "$DOCKER_COMPOSE_FILE" up -d --build
     
     print_status "Waiting for services to be healthy (this may take up to ${BACKEND_WAIT_TIME}s)..."
     

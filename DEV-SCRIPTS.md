@@ -34,6 +34,17 @@ Use this when you want to:
 - Use different frontend development tools
 - Debug frontend issues independently
 
+### Frontend Only
+```bash
+# Start only frontend (requires backend to be running)
+./start-frontend.sh
+```
+
+Use this when you want to:
+- Backend services are already running
+- Restart just the frontend during development
+- Work on frontend-only changes
+
 ### Stop All Services
 ```bash
 # Stop everything

@@ -37,7 +37,7 @@ main() {
     print_header "BACKEND SERVICES ONLY"
     
     print_status "Starting backend services..."
-    docker compose -f "$DOCKER_COMPOSE_FILE" up -d
+    docker compose -f "$DOCKER_COMPOSE_FILE" up -d --build
     
     print_status "Waiting for services to be ready..."
     sleep 10
@@ -53,6 +53,13 @@ main() {
     echo "🔐 Keycloak: http://localhost:8080"
     echo "💾 Adminer: http://localhost:8081"
     echo "🐘 PostgreSQL: localhost:5432"
+    echo ""
+    echo -e "${BLUE}📋 Database is automatically seeded with:${NC}"
+    echo "  - FIFA World Cup 2022 data (historical)"
+    echo "  - Real Bundesliga 2025/26 data (current season)"
+    echo ""
+    echo "To manually re-seed data:"
+    echo "  ./seed-data.sh"
     echo ""
     echo "To start frontend separately:"
     echo "  cd frontend/betting-league-app && ./start-dev.sh"
