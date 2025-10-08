@@ -8,19 +8,43 @@ API operations including validation and serialization.
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
+import re
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, validator
 
 from models.user import UserStatus
+from core.config import settings
 
 
 class UserBase(BaseModel):
     """Base user schema with common fields."""
     
     username: str
-    email: EmailStr
+    email: str  # Changed from EmailStr to str for custom validation
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        """Validate email format with development support for .local domains."""
+        if not v:
+            raise ValueError('Email is required')
+        
+        # Basic email pattern
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        
+        # In development/debug mode, allow .local domains
+        if settings.debug:
+            local_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.local$'
+            if re.match(local_pattern, v):
+                return v
+        
+        # Standard email validation
+        if not re.match(email_pattern, v):
+            raise ValueError('Invalid email format')
+        
+        return v
     
     @field_validator('username')
     @classmethod

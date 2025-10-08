@@ -21,7 +21,6 @@ from sqlalchemy.orm import Session
 
 from core.database import get_db
 from models.user import User
-from core.security import get_password_hash
 
 
 # Configure logging
@@ -51,20 +50,6 @@ class KeycloakService:
         self.keycloak_openid = None
         
         logger.info(f"Keycloak service initialized for realm: {self.realm_name}")
-    
-    def _get_safe_password_hash(self) -> str:
-        """Generate a safe password hash that won't exceed bcrypt limits."""
-        try:
-            password = "keycloak"
-            logger.info(f"Generating hash for password length: {len(password)}")
-            hash_result = get_password_hash(password)
-            logger.info(f"Generated hash successfully")
-            return hash_result
-        except Exception as e:
-            logger.error(f"Password hashing failed: {e}")
-            # Fallback to a direct bcrypt hash
-            from passlib.hash import bcrypt
-            return bcrypt.hash("fallback")
     
     def get_authorization_url(self, redirect_uri: str) -> Tuple[str, str]:
         """
@@ -400,16 +385,38 @@ class KeycloakService:
         try:
             # Extract user information from token
             keycloak_user_id = token_info.get("sub")
+            # Fallback to preferred_username if sub is not available (Keycloak configuration issue)
+            if not keycloak_user_id:
+                keycloak_user_id = token_info.get("preferred_username")
+                logger.warning(f"Token missing 'sub' field, using 'preferred_username' as Keycloak ID: {keycloak_user_id}")
+            else:
+                # Validate that sub field looks like a proper UUID (Keycloak user ID format)
+                import re
+                uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                if re.match(uuid_pattern, str(keycloak_user_id), re.IGNORECASE):
+                    logger.info(f"Using proper UUID from 'sub' field: {keycloak_user_id}")
+                else:
+                    logger.warning(f"'sub' field is not a UUID, using as-is: {keycloak_user_id}")
+            
             username = token_info.get("preferred_username")
             email = token_info.get("email")
             first_name = token_info.get("given_name", "")
             last_name = token_info.get("family_name", "")
             
+            # DEBUG: Log all token information for troubleshooting
+            logger.info(f"=== KEYCLOAK USER SYNC DEBUG ===")
+            logger.info(f"Keycloak User ID (sub): {keycloak_user_id}")
+            logger.info(f"Username (preferred_username): {username}")
+            logger.info(f"Email: {email}")
+            logger.info(f"First Name: {first_name}")
+            logger.info(f"Last Name: {last_name}")
+            logger.info(f"Full token_info keys: {list(token_info.keys())}")
+            logger.info(f"================================")
+            
             # Skip user synchronization for service accounts
             if username and username.startswith("service-account-"):
                 logger.info(f"Skipping user synchronization for service account: {username}")
                 # Create a temporary user object for service accounts (not saved to database)
-                from datetime import datetime, timezone
                 
                 service_user = User(
                     keycloak_id=keycloak_user_id,
@@ -437,6 +444,10 @@ class KeycloakService:
             try:
                 # First, check if user exists by Keycloak ID (most reliable)
                 user = db.query(User).filter(User.keycloak_id == keycloak_user_id).first()
+                logger.info(f"DEBUG: Looking for user by Keycloak ID {keycloak_user_id}: {'FOUND' if user else 'NOT FOUND'}")
+                
+                if user:
+                    logger.info(f"DEBUG: Found existing user by Keycloak ID - ID: {user.id}, Username: {user.username}, Email: {user.email}")
                 
                 if user:
                     # Update existing user with Keycloak ID - only update non-conflicting fields
@@ -461,8 +472,10 @@ class KeycloakService:
                 else:
                     # Check if user exists by username (legacy user without Keycloak ID)
                     user = db.query(User).filter(User.username == username).first()
+                    logger.info(f"DEBUG: Looking for user by username '{username}': {'FOUND' if user else 'NOT FOUND'}")
                     
                     if user:
+                        logger.info(f"DEBUG: Found existing user by username - ID: {user.id}, Username: {user.username}, Email: {user.email}")
                         # Link existing user to Keycloak
                         user.keycloak_id = keycloak_user_id
                         
@@ -486,6 +499,7 @@ class KeycloakService:
                         logger.info(f"Linked existing user to Keycloak: {username}")
                     else:
                         # Create new user
+                        logger.info(f"DEBUG: Creating NEW user for Keycloak user")
                         display_name = f"{first_name} {last_name}".strip() or username
                         
                         # Ensure email is not None - generate fallback if missing
@@ -499,12 +513,12 @@ class KeycloakService:
                             last_name=last_name or "User",
                             display_name=display_name,
                             date_of_birth=datetime(1990, 1, 1, tzinfo=timezone.utc),  # Default date
-                            password_hash=self._get_safe_password_hash(),  # Get safe password hash
                             role="admin" if is_admin else "user",
                             is_active=True
                         )
                         db.add(user)
                         
+                        logger.info(f"DEBUG: Created new user - Username: {username}, Email: {user_email}")
                         logger.info(f"Created new user: {username}")
                 
                 db.commit()

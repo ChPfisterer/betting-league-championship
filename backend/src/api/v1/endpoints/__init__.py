@@ -16,6 +16,7 @@ from . import (
     matches,
     players,
     bets,
+    predictions,  # New prediction endpoints
     results,
     group_memberships,
     audit_logs
@@ -33,6 +34,7 @@ __all__ = [
     "seasons",
     "players",
     "bets",
+    "predictions",  # New prediction endpoints
     "results",
     "group_memberships",
     "audit_logs"
