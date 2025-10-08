@@ -17,7 +17,6 @@ from typing import Union
 from typing import Optional, Dict, Any, List
 import uuid
 import re
-import bcrypt
 from enum import Enum
 
 from .base import Base
@@ -79,11 +78,6 @@ class User(Base):
         unique=True, 
         nullable=False,
         comment="User email address"
-    )
-    password_hash = Column(
-        String(255), 
-        nullable=False,
-        comment="Hashed password for authentication"
     )
     keycloak_id = Column(
         String(255),
@@ -188,10 +182,6 @@ class User(Base):
     locked_until = Column(
         DateTime(timezone=True),
         comment="Account locked until this timestamp"
-    )
-    password_changed_at = Column(
-        DateTime(timezone=True),
-        comment="When password was last changed"
     )
     
     # Preferences and settings
@@ -368,9 +358,9 @@ class User(Base):
         if len(username) > 50:
             raise ValueError("Username must be no more than 50 characters long")
         
-        # Only alphanumeric characters, underscores, and hyphens
-        if not re.match(r'^[a-zA-Z0-9_-]+$', username):
-            raise ValueError("Username can only contain letters, numbers, underscores, and hyphens")
+        # Allow alphanumeric characters, underscores, hyphens, dots, and @ symbol (for email usernames)
+        if not re.match(r'^[a-zA-Z0-9_.-@]+$', username):
+            raise ValueError("Username can only contain letters, numbers, underscores, hyphens, dots, and @ symbol")
         
         return username.lower()
     
@@ -494,30 +484,7 @@ class User(Base):
         """Setter for last_login_at alias."""
         self.last_login = value
     
-    # Authentication methods
-    def set_password(self, password: str) -> None:
-        """Set user password with proper hashing."""
-        if not password:
-            raise ValueError("Password is required")
-        
-        if len(password) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        
-        # Hash password with bcrypt
-        salt = bcrypt.gensalt()
-        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
-        self.password_changed_at = datetime.now(timezone.utc)
-    
-    def check_password(self, password: str) -> bool:
-        """Verify password against stored hash."""
-        if not password or not self.password_hash:
-            return False
-        
-        return bcrypt.checkpw(
-            password.encode('utf-8'), 
-            self.password_hash.encode('utf-8')
-        )
-    
+    # Account management methods
     def record_login(self, ip_address: Optional[str] = None) -> None:
         """Record successful login."""
         self.last_login = datetime.now(timezone.utc)

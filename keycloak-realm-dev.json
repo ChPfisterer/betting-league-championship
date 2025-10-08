@@ -90,7 +90,23 @@
       "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"],
       "redirectUris": ["http://localhost:4200/*"],
       "webOrigins": ["http://localhost:4200"],
-      "baseUrl": "http://localhost:4200"
+      "baseUrl": "http://localhost:4200",
+      "protocolMappers": [
+        {
+          "name": "subject-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "id",
+            "claim.name": "sub",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "roles": {
@@ -127,13 +143,13 @@
   },
   "users": [
     {
-      "username": "admin",
+      "username": "admin@bettingplatform.com",
       "enabled": true,
       "totp": false,
       "emailVerified": true,
-      "firstName": "Admin",
-      "lastName": "User",
-      "email": "admin@bettingleague.com",
+      "firstName": "Platform",
+      "lastName": "Administrator",
+      "email": "admin@bettingplatform.com",
       "credentials": [
         {
           "type": "password",
@@ -145,17 +161,17 @@
       "groups": []
     },
     {
-      "username": "testuser",
+      "username": "expert@worldcup.com",
       "enabled": true,
       "totp": false,
       "emailVerified": true,
-      "firstName": "Test",
-      "lastName": "User",
-      "email": "test@bettingleague.com",
+      "firstName": "World Cup",
+      "lastName": "Expert",
+      "email": "expert@worldcup.com",
       "credentials": [
         {
           "type": "password",
-          "value": "test123",
+          "value": "expert123",
           "temporary": false
         }
       ],
@@ -163,21 +179,39 @@
       "groups": []
     },
     {
-      "username": "moderator",
+      "username": "messi@argentina.com",
       "enabled": true,
       "totp": false,
       "emailVerified": true,
-      "firstName": "Moderator",
-      "lastName": "User",
-      "email": "moderator@bettingleague.com",
+      "firstName": "Lionel",
+      "lastName": "Fan",
+      "email": "messi@argentina.com",
       "credentials": [
         {
           "type": "password",
-          "value": "mod123",
+          "value": "messi123",
           "temporary": false
         }
       ],
-      "realmRoles": ["user", "moderator"],
+      "realmRoles": ["user"],
+      "groups": []
+    },
+    {
+      "username": "cristiano@portugal.com",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "firstName": "Cristiano",
+      "lastName": "Fan", 
+      "email": "cristiano@portugal.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "cr7123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"],
       "groups": []
     }
   ],

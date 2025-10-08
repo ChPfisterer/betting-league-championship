@@ -502,74 +502,11 @@ def create_complete_fifa_world_cup_data():
         
         print(f"✅ Created all {match_count} World Cup matches")
         
-        # 3. CREATE MORE USERS FIRST (needed for group creators)
-        print("👤 Creating users...")
-        users_data = [
-            ("admin", "admin@bettingplatform.com", "Admin", "User", "admin"),
-            ("worldcup_expert", "expert@worldcup.com", "World Cup", "Expert", "user"),
-            ("messi_fan", "messi@argentina.com", "Lionel", "Fan", "user"),
-            ("mbappe_fan", "mbappe@france.com", "Kylian", "Fan", "user"),
-            ("croatia_supporter", "modric@croatia.com", "Luka", "Supporter", "user"),
-            ("morocco_fan", "hakimi@morocco.com", "Achraf", "Fan", "user"),
-        ]
+        # 3. SKIP USER CREATION - Users will be created through Keycloak authentication
+        print("👤 Skipping user creation - users will be created through Keycloak authentication")
         
-        user_ids = {}
-        user_count = 0
-        for username, email, first_name, last_name, role in users_data:
-            user_id = str(uuid.uuid4())
-            user_ids[username] = user_id
-            session.execute(text("""
-                INSERT INTO users (id, username, email, password_hash, first_name, last_name,
-                                 display_name, date_of_birth, status, role, is_active, is_verified,
-                                 email_verified, phone_verified, kyc_status, failed_login_attempts,
-                                 language, timezone, currency, notifications_enabled,
-                                 terms_accepted, privacy_policy_accepted, marketing_consent,
-                                 created_at, updated_at)
-                VALUES (:id, :username, :email, '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj9wSAfvy5sO',
-                        :first_name, :last_name, :display_name, '1985-01-01 00:00:00+00',
-                        'active', :role, true, true, true, false, 'verified', 0,
-                        'en', 'UTC', 'USD', true,
-                        true, true, false, NOW(), NOW())
-            """), {
-                "id": user_id, "username": username, "email": email,
-                "first_name": first_name, "last_name": last_name,
-                "display_name": f"{first_name} {last_name}", "role": role
-            })
-            user_count += 1
-        
-        print(f"✅ Created {user_count} users")
-        
-        # 4. CREATE BETTING GROUPS (with all required fields)
-        print("🏆 Creating betting groups...")
-        groups_data = [
-            ("World Cup Champions", "Elite betting group for World Cup matches and predictions", "admin", False),
-            ("Group Stage Experts", "Focus on group stage upsets and surprises in the tournament", "worldcup_expert", False),
-            ("Knockout Stage Kings", "Specialized in elimination rounds and finals betting strategies", "messi_fan", True),
-            ("Underdog Hunters", "Betting on upsets and surprise results throughout the competition", "mbappe_fan", False),
-            ("Goals and Scores", "Focus on over/under and exact score betting for all matches", "croatia_supporter", True)
-        ]
-        
-        group_count = 0
-        for name, description, creator_username, is_private in groups_data:
-            group_id = str(uuid.uuid4())
-            creator_id = user_ids[creator_username]
-            join_code = f"JOIN{uuid.uuid4().hex[:6].upper()}" if is_private else None
-            
-            session.execute(text("""
-                INSERT INTO groups (id, name, description, creator_id, is_private, max_members,
-                                  allow_member_invites, auto_approve_members, point_system,
-                                  join_code, created_at, updated_at)
-                VALUES (:id, :name, :description, :creator_id, :is_private, 100,
-                        true, :auto_approve, 'standard', :join_code, NOW(), NOW())
-            """), {
-                "id": group_id, "name": name, "description": description,
-                "creator_id": creator_id, "is_private": is_private, 
-                "auto_approve": not is_private,  # Auto-approve for public groups
-                "join_code": join_code
-            })
-            group_count += 1
-        
-        print(f"✅ Created {group_count} betting groups")
+        # Note: Groups will be created when the first Keycloak user logs in and creates them
+        print("🏆 Skipping group creation - groups will be created by authenticated users")
         
         session.commit()
         
@@ -580,8 +517,8 @@ def create_complete_fifa_world_cup_data():
         print(f"   • 32 Teams (All World Cup participants)")
         print(f"   • {player_count} Players (comprehensive roster)")
         print(f"   • {match_count} Matches (complete tournament)")
-        print(f"   • {group_count} Betting groups")
-        print(f"   • {user_count} Users")
+        print(f"   • 0 Betting groups (will be created by authenticated users)")
+        print(f"   • 0 Users (will be created through Keycloak authentication)")
         print(f"   • 1 Season (2022 FIFA World Cup)")
         print(f"   • 1 Competition (FIFA World Cup 2022)")
         print("=" * 70)
