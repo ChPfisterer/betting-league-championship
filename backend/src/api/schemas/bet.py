@@ -50,52 +50,36 @@ class BetOutcome(str, Enum):
 
 
 class BetBase(BaseModel):
-    """Base bet schema with common fields."""
+    """Base prediction schema with common fields."""
     
-    bet_type: BetType = Field(..., description="Type of bet")
-    amount: float = Field(..., gt=0, description="Bet amount")
-    odds: float = Field(..., gt=1.0, description="Betting odds")
-    potential_payout: float = Field(..., gt=0, description="Potential payout")
-    
-    # Bet specifics
+    # Prediction specifics
     outcome: Optional[BetOutcome] = Field(None, description="Predicted outcome")
-    handicap_value: Optional[float] = Field(None, description="Handicap value (if applicable)")
-    total_value: Optional[float] = Field(None, description="Total goals/points value (if applicable)")
-    is_over: Optional[bool] = Field(None, description="Over/under selection (if applicable)")
     
-    # Score prediction (for correct score bets)
+    # Score prediction (main prediction mechanism)
     predicted_home_score: Optional[int] = Field(None, ge=0, description="Predicted home score")
     predicted_away_score: Optional[int] = Field(None, ge=0, description="Predicted away score")
     
-    # Additional bet parameters
-    bet_parameters: Optional[dict] = Field(None, description="Additional bet-specific parameters")
-    notes: Optional[str] = Field(None, max_length=500, description="Bet notes")
-
-    @field_validator('potential_payout')
-    @classmethod
-    def validate_potential_payout(cls, v: float, info) -> float:
-        """Validate that potential payout matches amount * odds."""
-        if 'amount' in info.data and 'odds' in info.data:
-            expected_payout = info.data['amount'] * info.data['odds']
-            if abs(v - expected_payout) > 0.01:  # Allow small floating point differences
-                raise ValueError('Potential payout must equal amount * odds')
-        return v
+    # Points earned from prediction
+    points_earned: int = Field(default=0, ge=0, le=3, description="Points earned (0, 1, or 3)")
+    
+    # Additional parameters
+    notes: Optional[str] = Field(None, max_length=500, description="Prediction notes")
 
     @field_validator('outcome')
     @classmethod
     def validate_outcome_for_bet_type(cls, v: Optional[BetOutcome], info) -> Optional[BetOutcome]:
-        """Validate outcome is provided for match winner bets."""
+        """Validate outcome is provided for match winner predictions."""
         if 'bet_type' in info.data and info.data['bet_type'] == BetType.MATCH_WINNER:
             if v is None:
-                raise ValueError('Outcome is required for match winner bets')
+                raise ValueError('Outcome is required for match winner predictions')
         return v
 
 
 class BetCreate(BetBase):
-    """Schema for creating a new bet."""
+    """Schema for creating a new prediction."""
     
-    match_id: UUID = Field(..., description="ID of the match to bet on")
-    group_id: Optional[UUID] = Field(None, description="ID of the group this bet belongs to")
+    match_id: UUID = Field(..., description="ID of the match to predict")
+    group_id: Optional[UUID] = Field(None, description="ID of the group this prediction belongs to")
 
     @field_validator('match_id')
     @classmethod
@@ -115,44 +99,49 @@ class BetUpdate(BaseModel):
     # Other fields are immutable once bet is placed
 
 
+class BetPatch(BaseModel):
+    """Schema for partial bet updates (PATCH operations)."""
+    
+    status: Optional[BetStatus] = Field(None, description="Update bet status")
+    notes: Optional[str] = Field(None, max_length=500, description="Update bet notes")
+
+
 class BetResponse(BetBase):
-    """Schema for bet responses."""
+    """Schema for prediction responses."""
     
-    id: UUID = Field(..., description="Bet unique identifier")
-    user_id: UUID = Field(..., description="User who placed the bet")
-    match_id: UUID = Field(..., description="Match this bet is for")
-    group_id: Optional[UUID] = Field(None, description="Group this bet belongs to")
+    id: UUID = Field(..., description="Prediction unique identifier")
+    user_id: UUID = Field(..., description="User who made the prediction")
+    match_id: UUID = Field(..., description="Match this prediction is for")
+    group_id: Optional[UUID] = Field(None, description="Group this prediction belongs to")
     
-    status: BetStatus = Field(..., description="Current bet status")
-    actual_payout: Optional[float] = Field(None, description="Actual payout (if settled)")
+    status: BetStatus = Field(..., description="Current prediction status")
     
     # Settlement details
-    settled_at: Optional[datetime] = Field(None, description="When bet was settled")
+    settled_at: Optional[datetime] = Field(None, description="When prediction was settled")
     settlement_reason: Optional[str] = Field(None, description="Reason for settlement")
     
     # Metadata
-    placed_at: datetime = Field(..., description="When bet was placed")
-    created_at: datetime = Field(..., description="Bet creation timestamp")
-    updated_at: datetime = Field(..., description="Bet last update timestamp")
-    is_active: bool = Field(..., description="Whether bet is active")
+    placed_at: datetime = Field(..., description="When prediction was placed")
+    created_at: datetime = Field(..., description="Prediction creation timestamp")
+    updated_at: datetime = Field(..., description="Prediction last update timestamp")
+    is_active: bool = Field(..., description="Whether prediction is active")
 
     class Config:
         from_attributes = True
 
 
 class BetSummary(BaseModel):
-    """Lightweight bet schema for lists and references."""
+    """Lightweight prediction schema for lists and references."""
     
-    id: UUID = Field(..., description="Bet unique identifier")
-    user_id: UUID = Field(..., description="User who placed the bet")
-    match_id: UUID = Field(..., description="Match this bet is for")
-    bet_type: BetType = Field(..., description="Type of bet")
-    amount: float = Field(..., description="Bet amount")
-    odds: float = Field(..., description="Betting odds")
-    potential_payout: float = Field(..., description="Potential payout")
-    status: BetStatus = Field(..., description="Current bet status")
-    placed_at: datetime = Field(..., description="When bet was placed")
-    is_active: bool = Field(..., description="Whether bet is active")
+    id: UUID = Field(..., description="Prediction unique identifier")
+    user_id: UUID = Field(..., description="User who made the prediction")
+    match_id: UUID = Field(..., description="Match this prediction is for")
+    predicted_home_score: Optional[int] = Field(None, description="Predicted home score")
+    predicted_away_score: Optional[int] = Field(None, description="Predicted away score")
+    points_earned: int = Field(..., description="Points earned from prediction")
+    status: BetStatus = Field(..., description="Current prediction status")
+    placed_at: datetime = Field(..., description="When prediction was placed")
+    is_active: bool = Field(..., description="Whether prediction is active")
 
     class Config:
         from_attributes = True
@@ -176,24 +165,16 @@ class BetWithUser(BetResponse):
         from_attributes = True
 
 
-class BetStats(BaseModel):
-    """Bet statistics schema."""
+class BetStatistics(BaseModel):
+    """Simple prediction statistics schema aligned with specification."""
     
-    total_bets: int = Field(..., description="Total number of bets")
-    total_amount: float = Field(..., description="Total amount bet")
-    total_payout: float = Field(..., description="Total payouts")
-    win_rate: float = Field(..., ge=0, le=100, description="Win rate percentage")
-    average_odds: float = Field(..., description="Average betting odds")
-    profit_loss: float = Field(..., description="Total profit/loss")
-    
-    # Bet type breakdown
-    bet_type_stats: dict = Field(..., description="Statistics by bet type")
-    
-    # Status breakdown
-    won_bets: int = Field(..., description="Number of won bets")
-    lost_bets: int = Field(..., description="Number of lost bets")
-    pending_bets: int = Field(..., description="Number of pending bets")
-    void_bets: int = Field(..., description="Number of void bets")
+    total_predictions: int = Field(..., description="Total number of predictions")
+    total_points: int = Field(..., description="Total points earned")
+    exact_score_predictions: int = Field(..., description="Number of exact score predictions (3 points each)")
+    winner_only_predictions: int = Field(..., description="Number of winner-only predictions (1 point each)")
+    wrong_predictions: int = Field(..., description="Number of incorrect predictions (0 points)")
+    accuracy_percentage: float = Field(..., ge=0, le=100, description="Overall accuracy percentage")
+    average_points_per_prediction: float = Field(..., description="Average points per prediction")
 
     class Config:
         from_attributes = True
@@ -202,7 +183,7 @@ class BetStats(BaseModel):
 class BetWithStats(BetResponse):
     """Bet response with statistics."""
     
-    stats: BetStats = Field(..., description="Bet statistics")
+    stats: BetStatistics = Field(..., description="Prediction statistics")
 
     class Config:
         from_attributes = True
@@ -213,7 +194,7 @@ class BetHistory(BaseModel):
     
     user_id: UUID = Field(..., description="User ID")
     bets: List[BetSummary] = Field(..., description="List of user bets")
-    summary_stats: BetStats = Field(..., description="Summary statistics")
+    summary_stats: BetStatistics = Field(..., description="Summary prediction statistics")
     last_updated: datetime = Field(..., description="Last update timestamp")
 
     class Config:
@@ -221,52 +202,20 @@ class BetHistory(BaseModel):
 
 
 class BetSettlement(BaseModel):
-    """Bet settlement schema."""
+    """Prediction settlement schema."""
     
-    bet_id: UUID = Field(..., description="Bet ID")
+    bet_id: UUID = Field(..., description="Prediction ID")
     status: BetStatus = Field(..., description="Settlement status")
-    actual_payout: Optional[float] = Field(None, description="Actual payout amount")
+    points_awarded: int = Field(..., description="Points awarded for prediction")
     settlement_reason: str = Field(..., description="Reason for settlement")
-    settled_by: UUID = Field(..., description="User who settled the bet")
-
-    class Config:
-        from_attributes = True
-
-
-class BetOdds(BaseModel):
-    """Bet odds schema for different outcomes."""
-    
-    match_id: UUID = Field(..., description="Match ID")
-    
-    # Match winner odds
-    home_win_odds: Optional[float] = Field(None, description="Home team win odds")
-    away_win_odds: Optional[float] = Field(None, description="Away team win odds")
-    draw_odds: Optional[float] = Field(None, description="Draw odds")
-    
-    # Over/under odds
-    total_goals_line: Optional[float] = Field(None, description="Total goals line")
-    over_odds: Optional[float] = Field(None, description="Over odds")
-    under_odds: Optional[float] = Field(None, description="Under odds")
-    
-    # Handicap odds
-    handicap_line: Optional[float] = Field(None, description="Handicap line")
-    home_handicap_odds: Optional[float] = Field(None, description="Home team handicap odds")
-    away_handicap_odds: Optional[float] = Field(None, description="Away team handicap odds")
-    
-    # Additional odds
-    both_teams_score_yes: Optional[float] = Field(None, description="Both teams score YES odds")
-    both_teams_score_no: Optional[float] = Field(None, description="Both teams score NO odds")
-    
-    # Metadata
-    last_updated: datetime = Field(..., description="When odds were last updated")
-    bookmaker: Optional[str] = Field(None, description="Bookmaker/odds provider")
+    settled_by: UUID = Field(..., description="User who settled the prediction")
 
     class Config:
         from_attributes = True
 
 
 class BetSlip(BaseModel):
-    """Bet slip schema for multiple bets."""
+    """Prediction slip schema for multiple predictions."""
     
     user_id: UUID = Field(..., description="User placing the bets")
     bets: List[BetCreate] = Field(..., min_length=1, description="List of bets to place")
@@ -300,30 +249,6 @@ class BetLeaderboard(BaseModel):
     class Config:
         from_attributes = True
 
-
-class BetAnalytics(BaseModel):
-    """Bet analytics schema."""
-    
-    period: str = Field(..., description="Analytics period")
-    
-    # Volume metrics
-    total_bets_placed: int = Field(..., description="Total bets placed")
-    total_amount_wagered: float = Field(..., description="Total amount wagered")
-    total_payouts: float = Field(..., description="Total payouts")
-    
-    # Performance metrics
-    house_edge: float = Field(..., description="House edge percentage")
-    return_to_player: float = Field(..., description="Return to player percentage")
-    
-    # Popular bet types
-    popular_bet_types: dict = Field(..., description="Popular bet types with counts")
-    
-    # Match analytics
-    most_bet_matches: List[dict] = Field(..., description="Most popular matches for betting")
-    
-    # User analytics
-    active_bettors: int = Field(..., description="Number of active bettors")
-    average_bet_size: float = Field(..., description="Average bet size")
 
     class Config:
         from_attributes = True

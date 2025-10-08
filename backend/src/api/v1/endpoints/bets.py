@@ -18,18 +18,15 @@ from core.keycloak_security import get_current_user_hybrid
 from models import User, Bet, Match, Group
 from api.schemas.bet import (
     BetCreate,
-    BetUpdate,
-    BetSettlement,
-    BetResponse,
     BetSummary,
-    BetWithMatch,
-    BetWithUser,
-    BetWithStats,
+    BetResponse,
+    BetUpdate,
+    BetPatch,
+    BetStatistics,
     BetHistory,
-    BetOdds,
-    BetSlip,
     BetLeaderboard,
-    BetAnalytics,
+    BetWithMatch,
+    BetSettlement,
     BetType,
     BetStatus
 )

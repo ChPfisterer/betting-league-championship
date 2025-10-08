@@ -418,7 +418,6 @@ class MatchPrediction(BaseModel):
     match_id: UUID = Field(..., description="Match ID")
     predicted_home_score: Optional[int] = Field(None, description="Predicted home score")
     predicted_away_score: Optional[int] = Field(None, description="Predicted away score")
-    confidence: Optional[float] = Field(None, ge=0, le=100, description="Prediction confidence %")
     predicted_winner: Optional[str] = Field(None, description="Predicted winner")
 
     class Config:

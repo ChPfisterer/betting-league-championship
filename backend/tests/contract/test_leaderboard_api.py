@@ -125,12 +125,11 @@ class TestLeaderboardAPIContracts:
                     "user_id": str,
                     "username": str,
                     "display_name": str,
-                    "accuracy_percentage": float,
-                    "total_bets": int,
-                    "correct_predictions": int,
-                    "average_odds": float,
-                    "confidence_score": float,  # Weighted accuracy by odds
-                    "last_bet_at": str,
+                    "total_points": int,  # Simple points total (1 or 3 per prediction)
+                    "total_predictions": int,
+                    "exact_score_predictions": int,
+                    "winner_predictions": int,
+                    "last_prediction_at": str,
                     "rank_change": int
                 }
             ]
@@ -367,48 +366,25 @@ class TestLeaderboardAPIContracts:
             "display_name": str,
             "period": str,
             "statistics": {
-                "betting": {
-                    "total_bets": int,
-                    "total_stakes": float,
-                    "total_winnings": float,
-                    "net_profit": float,
-                    "roi_percentage": float,
-                    "win_rate": float,
-                    "average_odds": float,
-                    "biggest_win": float,
-                    "biggest_loss": float,
-                    "longest_win_streak": int,
-                    "longest_loss_streak": int,
-                    "current_streak": {
-                        "type": str,  # "win" or "loss"
-                        "count": int
-                    }
+                "predictions": {
+                    "total_predictions": int,
+                    "total_points": int,
+                    "exact_score_predictions": int,
+                    "winner_only_predictions": int,
+                    "wrong_predictions": int,
+                    "accuracy_percentage": float,
+                    "average_points_per_prediction": float
                 },
                 "rankings": {
-                    "best_global_rank": int,
-                    "current_global_rank": int,
-                    "rank_improvement": int,
-                    "top_percentile_achieved": float
+                    "current_group_rank": int,
+                    "rank_change": int
                 },
                 "activity": {
-                    "first_bet_date": str,
-                    "last_bet_date": str,
+                    "first_prediction_date": str,
+                    "last_prediction_date": str,
                     "days_active": int,
-                    "average_bets_per_day": float,
-                    "most_active_competition": str,
-                    "favorite_bet_type": str
-                }
-            },
-            "comparison": {
-                "vs_platform_average": {
-                    "win_rate_diff": float,
-                    "roi_diff": float,
-                    "activity_diff": float
-                },
-                "percentile_rankings": {
-                    "win_rate": float,
-                    "profit": float,
-                    "activity": float
+                    "average_predictions_per_day": float,
+                    "most_active_group": str
                 }
             }
         }

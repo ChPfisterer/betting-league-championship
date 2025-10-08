@@ -1616,14 +1616,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.log('Dialog closed with result:', result);
         if (result) {
           // Calculate potential points
-          const potentialPoints = Math.round(result.confidence * result.odds * 10);
+          const potentialPoints = Math.round(result.odds * 10);
           
           // Place the prediction via the service
           this.dashboardService.placeBet(
             result.matchId, 
             result.prediction, 
-            result.odds, 
-            result.confidence
+            result.odds
           ).subscribe({
             next: (prediction) => {
               console.log('Prediction placed successfully:', prediction);
@@ -1658,8 +1657,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     this.dashboardService.placeBet(
                       result.matchId, 
                       result.prediction, 
-                      result.odds, 
-                      result.confidence
+                      result.odds
                     ).subscribe({
                       next: (prediction) => {
                         console.log('Prediction placed successfully after token refresh:', prediction);
