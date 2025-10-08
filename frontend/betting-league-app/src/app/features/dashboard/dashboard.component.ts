@@ -737,6 +737,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       status: 'live',
       homeScore: 1,
       awayScore: 2,
+      stage: 'Premier League',
+      match_type: 'regular',
       odds: { home: 2.1, draw: 3.2, away: 3.8 },
       liveData: {
         minute: 67,
@@ -754,6 +756,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       status: 'live',
       homeScore: 0,
       awayScore: 1,
+      stage: 'La Liga',
+      match_type: 'regular',
       odds: { home: 1.9, draw: 3.4, away: 4.2 },
       liveData: {
         minute: 34,
@@ -772,6 +776,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       awayTeamLogo: 'https://logoeps.com/wp-content/uploads/2013/03/chelsea-vector-logo.png',
       kickoff: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
       status: 'upcoming',
+      stage: 'Premier League',
+      match_type: 'regular',
       odds: { home: 2.3, draw: 3.1, away: 2.9 }
     },
     {
@@ -783,6 +789,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       awayTeamLogo: 'https://logoeps.com/wp-content/uploads/2013/03/borussia-dortmund-vector-logo.png',
       kickoff: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 hours from now
       status: 'upcoming',
+      stage: 'Bundesliga',
+      match_type: 'regular',
       odds: { home: 1.7, draw: 3.8, away: 4.5 }
     },
     {
@@ -794,6 +802,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       awayTeamLogo: 'https://logoeps.com/wp-content/uploads/2014/09/golden-state-warriors-vector-logo.png',
       kickoff: new Date(Date.now() + 6 * 60 * 60 * 1000), // 6 hours from now
       status: 'upcoming',
+      stage: 'NBA',
+      match_type: 'regular',
       odds: { home: 1.9, draw: 21.0, away: 2.1 }
     }
   ];
@@ -854,7 +864,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           stake: bet.stake_amount,
           potentialWin: bet.potential_payout,
           status: bet.status === 'void' ? 'lost' : bet.status as 'pending' | 'won' | 'lost',
-          placedAt: new Date(bet.placed_at)
+          placedAt: new Date(bet.placed_at),
+          pointsEarned: (bet as any).points_earned || 0
         }));
       },
       error: (error) => {

@@ -451,17 +451,13 @@ class BetService:
                 bet_type_stats[bet_type]["lost"] += 1
         
         return {
-            "total_bets": total_bets,
-            "total_amount": total_amount,
-            "total_payout": total_payout,
-            "win_rate": win_rate,
-            "profit_loss": profit_loss,
-            "average_odds": average_odds,
-            "won_bets": len(won_bets),
-            "lost_bets": len(lost_bets),
-            "pending_bets": len(pending_bets),
-            "void_bets": len(void_bets),
-            "bet_type_stats": bet_type_stats
+            "total_predictions": total_bets,
+            "total_points": sum(getattr(bet, 'points_earned', 0) for bet in user_bets),
+            "exact_score_predictions": len([bet for bet in user_bets if getattr(bet, 'points_earned', 0) == 3]),
+            "winner_only_predictions": len([bet for bet in user_bets if getattr(bet, 'points_earned', 0) == 1]),
+            "wrong_predictions": len([bet for bet in user_bets if getattr(bet, 'points_earned', 0) == 0]),
+            "accuracy_percentage": ((len(won_bets) + len([bet for bet in user_bets if getattr(bet, 'points_earned', 0) == 1])) / total_bets * 100) if total_bets > 0 else 0,
+            "average_points_per_prediction": (sum(getattr(bet, 'points_earned', 0) for bet in user_bets) / total_bets) if total_bets > 0 else 0
         }
     
     def get_match_statistics(self, match_id: UUID) -> Dict[str, Any]:

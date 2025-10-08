@@ -24,7 +24,6 @@ from .base import Base
 class PointSystem(Enum):
     """Valid point systems for groups."""
     STANDARD = "standard"
-    CONFIDENCE = "confidence"
     SPREAD = "spread"
     CUSTOM = "custom"
 
@@ -148,7 +147,7 @@ class Group(Base):
     # Constraints
     __table_args__ = (
         CheckConstraint(
-            "point_system IN ('standard', 'confidence', 'spread', 'custom')",
+            "point_system IN ('standard', 'spread', 'custom')",
             name="ck_groups_point_system"
         ),
         CheckConstraint(

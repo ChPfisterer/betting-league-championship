@@ -164,8 +164,7 @@ def sample_bet_data():
         "prediction": {
             "home_score": 2,
             "away_score": 1
-        },
-        "confidence": 8
+        }
     }
 
 

@@ -31,7 +31,6 @@ export interface BetPlacementResult {
   matchId: string;
   prediction: 'home' | 'draw' | 'away';
   odds: number;
-  confidence: number; // 1-10 confidence level
 }
 
 @Component({
@@ -118,48 +117,6 @@ export interface BetPlacementResult {
           </mat-card-content>
         </mat-card>
 
-        <!-- Confidence Level Selection -->
-        <mat-card class="confidence-card">
-          <mat-card-header>
-            <mat-card-title>
-              <mat-icon>psychology</mat-icon>
-              How Confident Are You?
-            </mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <form [formGroup]="betForm">
-              <!-- Quick Confidence Buttons -->
-              <div class="quick-confidence">
-                <mat-chip-listbox>
-                  <mat-chip-option 
-                    *ngFor="let level of confidenceLevels" 
-                    (click)="setConfidence(level.value)"
-                    [selected]="betForm.get('confidence')?.value === level.value">
-                    {{ level.label }}
-                  </mat-chip-option>
-                </mat-chip-listbox>
-              </div>
-
-              <!-- Confidence Slider -->
-              <div class="confidence-slider-container">
-                <label class="confidence-label">Confidence Level: {{ betForm.get('confidence')?.value }}/10</label>
-                <mat-slider 
-                  min="1" 
-                  max="10" 
-                  step="1" 
-                  discrete
-                  (input)="onSliderChange($event)">
-                  <input matSliderThumb [value]="betForm.get('confidence')?.value || 5">
-                </mat-slider>
-                <div class="confidence-scale">
-                  <span>Not Sure</span>
-                  <span>Very Confident</span>
-                </div>
-              </div>
-            </form>
-          </mat-card-content>
-        </mat-card>
-
         <!-- Prediction Summary -->
         <mat-card class="prediction-summary-card" *ngIf="isValidPrediction()">
           <mat-card-header>
@@ -176,10 +133,6 @@ export interface BetPlacementResult {
             <div class="summary-row">
               <span class="label">Odds:</span>
               <span class="value">{{ getSelectedOdds() | number:'1.2-2' }}</span>
-            </div>
-            <div class="summary-row">
-              <span class="label">Confidence:</span>
-              <span class="value confidence-level">{{ betForm.get('confidence')?.value }}/10 {{ getConfidenceLabel() }}</span>
             </div>
             <mat-divider></mat-divider>
             <div class="summary-row total">
@@ -313,39 +266,6 @@ export interface BetPlacementResult {
       font-weight: 700;
     }
 
-    .confidence-card {
-      margin-bottom: 16px;
-    }
-
-    .quick-confidence {
-      margin-bottom: 16px;
-    }
-
-    .quick-confidence mat-chip-listbox {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .confidence-slider-container {
-      margin-bottom: 16px;
-    }
-
-    .confidence-label {
-      display: block;
-      margin-bottom: 10px;
-      font-weight: 500;
-      color: #666;
-    }
-
-    .confidence-scale {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 5px;
-      font-size: 12px;
-      color: #999;
-    }
-
     .prediction-summary-card {
       background: #f8f9fa;
       border: 2px solid #e9ecef;
@@ -380,11 +300,6 @@ export interface BetPlacementResult {
     .prediction-text {
       color: #1976d2;
       font-weight: 600;
-    }
-
-    .confidence-level {
-      color: #ff9800;
-      font-weight: 500;
     }
 
     .dialog-actions {
@@ -441,12 +356,6 @@ export interface BetPlacementResult {
 export class BetDialogComponent implements OnInit {
   betForm: FormGroup;
   selectedPrediction: 'home' | 'draw' | 'away';
-  confidenceLevels = [
-    { value: 3, label: 'Unsure' },
-    { value: 5, label: 'Moderate' },
-    { value: 7, label: 'Confident' },
-    { value: 10, label: 'Certain' }
-  ];
 
   constructor(
     private fb: FormBuilder,
@@ -456,12 +365,12 @@ export class BetDialogComponent implements OnInit {
     this.selectedPrediction = data.selectedPrediction;
     
     this.betForm = this.fb.group({
-      confidence: [5, [Validators.required, Validators.min(1), Validators.max(10)]]
+      // Form for future prediction fields if needed
     });
   }
 
   ngOnInit(): void {
-    // Component is ready - confidence slider is automatically interactive
+    // Component is ready
     console.log('Prediction dialog ready');
   }
 
@@ -469,16 +378,8 @@ export class BetDialogComponent implements OnInit {
     this.selectedPrediction = prediction;
   }
 
-  setConfidence(level: number): void {
-    this.betForm.patchValue({ confidence: level });
-  }
-
-  onSliderChange(event: any): void {
-    this.betForm.patchValue({ confidence: event.value });
-  }
-
   isValidPrediction(): boolean {
-    return this.betForm.valid && this.selectedPrediction !== null;
+    return this.selectedPrediction !== null;
   }
 
   getSelectedOdds(): number {
@@ -499,18 +400,9 @@ export class BetDialogComponent implements OnInit {
   }
 
   calculatePotentialPoints(): number {
-    const confidence = this.betForm.get('confidence')?.value || 1;
     const odds = this.getSelectedOdds();
-    // Points = confidence * odds * 10 (base multiplier)
-    return Math.round(confidence * odds * 10);
-  }
-
-  getConfidenceLabel(): string {
-    const confidence = this.betForm.get('confidence')?.value || 1;
-    if (confidence <= 3) return '🤔';
-    if (confidence <= 5) return '😐';
-    if (confidence <= 7) return '😊';
-    return '💪';
+    // Points = odds * 10 (base multiplier) 
+    return Math.round(odds * 10);
   }
 
   onMakePrediction(): void {
@@ -518,8 +410,7 @@ export class BetDialogComponent implements OnInit {
       const result: BetPlacementResult = {
         matchId: this.data.match.id,
         prediction: this.selectedPrediction,
-        odds: this.getSelectedOdds(),
-        confidence: this.betForm.get('confidence')?.value
+        odds: this.getSelectedOdds()
       };
 
       this.dialogRef.close(result);

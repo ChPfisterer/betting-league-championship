@@ -61,6 +61,16 @@ export interface Match {
   competition?: Competition;
   home_team?: Team;
   away_team?: Team;
+  // Temporary additional fields for compatibility with dashboard components
+  stage?: string;
+  leagueId?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  homeTeamLogo?: string;
+  awayTeamLogo?: string;
+  kickoff?: Date;
+  liveData?: any;
+  odds?: { home: number; draw: number; away: number };
 }
 
 export interface Bet {
@@ -75,6 +85,12 @@ export interface Bet {
   placed_at: string;
   status: 'pending' | 'won' | 'lost' | 'void';
   match?: Match;
+  // Temporary additional fields for compatibility with dashboard components
+  prediction?: string;
+  stake?: number;
+  potentialWin?: number;
+  placedAt?: Date;
+  pointsEarned?: number;
 }
 
 export interface UserStats {

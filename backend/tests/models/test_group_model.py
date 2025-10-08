@@ -212,7 +212,7 @@ class TestGroupModelValidation:
             pytest.skip("Group model not implemented yet")
             
         # Valid point systems
-        valid_systems = ['standard', 'confidence', 'spread', 'custom']
+        valid_systems = ['standard', 'spread', 'custom']
         
         for system in valid_systems:
             group = Group(
