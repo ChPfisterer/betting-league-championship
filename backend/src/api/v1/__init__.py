@@ -17,6 +17,7 @@ from .endpoints import (
     seasons,
     players,
     bets,
+    predictions,  # New prediction endpoints
     results,
     group_memberships,
     audit_logs,
@@ -92,6 +93,12 @@ api_router.include_router(
     bets.router, 
     prefix="/bets", 
     tags=["Bets"]
+)
+
+api_router.include_router(
+    predictions.router, 
+    prefix="/predictions", 
+    tags=["Predictions"]
 )
 
 api_router.include_router(
