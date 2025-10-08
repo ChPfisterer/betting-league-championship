@@ -248,33 +248,8 @@ def create_comprehensive_seed_data():
                     "position": position, "jersey": jersey
                 })
         
-        # Create test users
-        print("👤 Creating test users...")
-        users_data = [
-            ("admin", "admin@bettingplatform.com", "Admin", "User", "admin"),
-            ("testuser", "test@example.com", "Test", "User", "user"),
-            ("worldcup_fan", "fan@worldcup.com", "World Cup", "Fan", "user"),
-        ]
-        
-        for username, email, first_name, last_name, role in users_data:
-            user_id = str(uuid.uuid4())
-            session.execute(text("""
-                INSERT INTO users (id, username, email, password_hash, first_name, last_name,
-                                 display_name, date_of_birth, status, role, is_active, is_verified,
-                                 email_verified, phone_verified, kyc_status, failed_login_attempts,
-                                 language, timezone, currency, notifications_enabled,
-                                 terms_accepted, privacy_policy_accepted, marketing_consent,
-                                 created_at, updated_at)
-                VALUES (:id, :username, :email, '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj9wSAfvy5sO',
-                        :first_name, :last_name, :display_name, '1985-01-01 00:00:00+00',
-                        'active', :role, true, true, true, false, 'verified', 0,
-                        'en', 'UTC', 'USD', true,
-                        true, true, false, NOW(), NOW())
-            """), {
-                "id": user_id, "username": username, "email": email,
-                "first_name": first_name, "last_name": last_name,
-                "display_name": f"{first_name} {last_name}", "role": role
-            })
+        # Skip user creation - users will be created through Keycloak authentication
+        print("👤 Skipping test user creation - users will be created through Keycloak authentication")
         
         session.commit()
         
