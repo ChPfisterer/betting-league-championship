@@ -10,6 +10,7 @@ validation and error handling.
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 from uuid import UUID
+from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc
 
@@ -61,6 +62,22 @@ class BetService:
         if not can_bet:
             raise ValueError(bet_message)
         
+        # Validate bet type specific requirements
+        self._validate_bet_type_requirements(bet_data)
+        
+        # Validate minimum stake amount
+        if bet_data.amount < 0.01:
+            raise ValueError("Minimum bet amount is 0.01")
+        
+        # Validate odds
+        if bet_data.odds < 1.01:
+            raise ValueError("Minimum odds is 1.01")
+        
+        # Validate potential payout calculation
+        expected_payout = bet_data.amount * bet_data.odds
+        if abs(bet_data.potential_payout - expected_payout) > 0.01:
+            raise ValueError(f"Potential payout ({bet_data.potential_payout}) does not match amount * odds ({expected_payout})")
+        
         # Validate group if specified (Note: group_id field doesn't exist in Bet model yet)
         # if bet_data.group_id:
         #     group = self.db.query(Group).filter(Group.id == bet_data.group_id).first()
@@ -77,11 +94,11 @@ class BetService:
             # group_id=bet_data.group_id,  # This field doesn't exist in model
             bet_type=ModelBetType.SINGLE.value,  # Default to single bet for now
             market_type=self._map_schema_bet_type_to_market_type(bet_data.bet_type).value,
-            stake_amount=bet_data.amount,  # Use stake_amount instead of amount
-            odds=bet_data.odds,
-            potential_payout=bet_data.potential_payout,
+            stake_amount=float(bet_data.amount),  # Ensure proper decimal conversion
+            odds=float(bet_data.odds),
+            potential_payout=float(bet_data.potential_payout),
             selection=bet_data.outcome.value if bet_data.outcome else None,  # Use selection instead of outcome
-            handicap=bet_data.handicap_value,  # Use handicap instead of handicap_value
+            handicap=float(bet_data.handicap_value) if bet_data.handicap_value else None,  # Handle None values
             notes=bet_data.notes,
             status=BetStatus.PENDING.value,
             placed_at=datetime.now(timezone.utc),
@@ -103,6 +120,26 @@ class BetService:
             # Add more mappings as needed
         }
         return mapping.get(schema_bet_type, MarketType.MATCH_WINNER)  # Default fallback
+    
+    def _validate_bet_type_requirements(self, bet_data: BetCreate) -> None:
+        """Validate bet type specific requirements."""
+        if bet_data.bet_type == SchemaBetType.MATCH_WINNER:
+            if not bet_data.outcome:
+                raise ValueError("Outcome is required for match winner bets")
+        
+        elif bet_data.bet_type == SchemaBetType.TOTAL_GOALS:
+            if bet_data.total_value is None or bet_data.is_over is None:
+                raise ValueError("Total value and over/under selection are required for total goals bets")
+        
+        elif bet_data.bet_type == SchemaBetType.HANDICAP:
+            if bet_data.handicap_value is None:
+                raise ValueError("Handicap value is required for handicap bets")
+            if not bet_data.outcome:
+                raise ValueError("Outcome is required for handicap bets")
+        
+        elif bet_data.bet_type == SchemaBetType.CORRECT_SCORE:
+            if bet_data.predicted_home_score is None or bet_data.predicted_away_score is None:
+                raise ValueError("Both home and away score predictions are required for correct score bets")
     
     def _map_market_type_to_schema_bet_type(self, market_type: str) -> SchemaBetType:
         """Map model MarketType back to schema BetType."""
@@ -129,32 +166,39 @@ class BetService:
     
     def transform_bet_for_response(self, bet: Bet) -> dict:
         """Transform model Bet to response schema compatible format."""
-        return {
-            "id": bet.id,
-            "user_id": bet.user_id,
-            "match_id": bet.match_id,
-            "group_id": getattr(bet, 'group_id', None),
-            "bet_type": self._map_market_type_to_schema_bet_type(bet.market_type),
-            "amount": float(bet.stake_amount),
-            "odds": float(bet.odds),
-            "potential_payout": float(bet.potential_payout),
-            "outcome": bet.selection,
-            "handicap_value": float(bet.handicap) if bet.handicap else None,
-            "total_value": getattr(bet, 'total_value', None),
-            "is_over": getattr(bet, 'is_over', None),
-            "predicted_home_score": getattr(bet, 'predicted_home_score', None),
-            "predicted_away_score": getattr(bet, 'predicted_away_score', None),
-            "bet_parameters": getattr(bet, 'bet_parameters', None),
-            "notes": bet.notes,
-            "status": self._map_model_status_to_schema_status(bet.status),
-            "actual_payout": float(bet.payout_amount) if bet.payout_amount else None,
-            "settled_at": getattr(bet, 'settled_at', None),
-            "settlement_reason": getattr(bet, 'settlement_reason', None),
-            "placed_at": bet.placed_at,
-            "created_at": bet.created_at,
-            "updated_at": bet.updated_at,
-            "is_active": bet.is_active
-        }
+        try:
+            return {
+                "id": bet.id,
+                "user_id": bet.user_id,
+                "match_id": bet.match_id,
+                "group_id": getattr(bet, 'group_id', None),
+                "bet_type": self._map_market_type_to_schema_bet_type(bet.market_type),
+                "amount": float(bet.stake_amount) if bet.stake_amount is not None else 0.0,
+                "odds": float(bet.odds) if bet.odds is not None else 1.0,
+                "potential_payout": float(bet.potential_payout) if bet.potential_payout is not None else 0.0,
+                "outcome": bet.selection,
+                "handicap_value": float(bet.handicap) if bet.handicap is not None else None,
+                "total_value": getattr(bet, 'total_value', None),
+                "is_over": getattr(bet, 'is_over', None),
+                "predicted_home_score": getattr(bet, 'predicted_home_score', None),
+                "predicted_away_score": getattr(bet, 'predicted_away_score', None),
+                "bet_parameters": getattr(bet, 'bet_parameters', None),
+                "notes": bet.notes,
+                "status": self._map_model_status_to_schema_status(bet.status),
+                "actual_payout": float(bet.payout_amount) if hasattr(bet, 'payout_amount') and bet.payout_amount is not None else None,
+                "settled_at": getattr(bet, 'settled_at', None),
+                "settlement_reason": getattr(bet, 'settlement_reason', None),
+                "placed_at": bet.placed_at,
+                "created_at": bet.created_at,
+                "updated_at": bet.updated_at if hasattr(bet, 'updated_at') and bet.updated_at else bet.created_at,
+                "is_active": bet.is_active  # This is a property method
+            }
+        except Exception as e:
+            # Log the error and provide meaningful feedback
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error transforming bet {bet.id}: {e}")
+            raise ValueError(f"Failed to transform bet data: {e}")
     
     def get_bet(self, bet_id: UUID) -> Optional[Bet]:
         """Get bet by ID."""

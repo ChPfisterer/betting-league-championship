@@ -19,8 +19,8 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { DashboardService, DashboardMatch, DashboardBet, DashboardStats, DashboardLeague } from '../../core/services/dashboard.service';
 import { BetDialogComponent, BetDialogData, BetPlacementResult } from '../betting/bet-dialog/bet-dialog.component';
-import { Subscription, firstValueFrom } from 'rxjs';
-import { take } from 'rxjs/operators';
+import { Subscription, firstValueFrom, of } from 'rxjs';
+import { take, tap, catchError } from 'rxjs/operators';
 
 // Use interfaces from dashboard service
 interface League extends DashboardLeague {}
@@ -1166,11 +1166,36 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Subscribe to user changes
-    this.authService.currentUser$.subscribe((user: any) => {
-      this.currentUser = user;
-      if (user) {
-        this.loadDashboardData();
+    // Force refresh user info to get latest UUID from backend
+    console.log('Dashboard: Forcing user info refresh...');
+    console.log('Dashboard: Current user before refresh:', this.authService.getCurrentUser());
+    
+    this.authService.refreshUserInfo().pipe(
+      tap((user: any) => {
+        console.log('Dashboard: User refresh completed:', user);
+        console.log('Dashboard: User ID is:', user?.id);
+        console.log('Dashboard: User ID type:', typeof user?.id);
+        console.log('Dashboard: Is user.id a UUID?', /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user?.id || ''));
+      }),
+      catchError((error: any) => {
+        console.error('Dashboard: User refresh failed:', error);
+        // Get current user as fallback
+        const currentUser = this.authService.getCurrentUser();
+        console.log('Dashboard: Fallback to current user:', currentUser);
+        return of(currentUser);
+      })
+    ).subscribe({
+      next: (user) => {
+        console.log('Dashboard: Final user for dashboard loading:', user);
+        this.currentUser = user;
+        if (user && user.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
+          this.loadDashboardData();
+        } else {
+          console.error('Dashboard: Invalid or missing user ID, cannot load dashboard:', user?.id);
+        }
+      },
+      error: (error) => {
+        console.error('Dashboard: Critical error, cannot load dashboard:', error);
       }
     });
 
@@ -1179,6 +1204,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     // Start live updates
     this.dashboardService.startLiveUpdates();
+  }
+
+  private setupUserSubscription(): void {
+    // Subscribe to user changes
+    this.authService.currentUser$.subscribe((user: any) => {
+      this.currentUser = user;
+      if (user) {
+        this.loadDashboardData();
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -1240,6 +1275,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.dashboardService.getUserBets().subscribe({
         next: (bets) => {
+          console.log('Dashboard: Received user bets:', bets);
+          console.log('Dashboard: Number of bets:', bets.length);
           this.userBets = bets;
         },
         error: (error) => {
