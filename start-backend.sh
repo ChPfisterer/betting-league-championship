@@ -37,7 +37,7 @@ main() {
     print_header "BACKEND SERVICES ONLY"
     
     print_status "Starting backend services..."
-    docker compose -f "$DOCKER_COMPOSE_FILE" up -d
+    docker compose -f "$DOCKER_COMPOSE_FILE" up -d --build
     
     print_status "Waiting for services to be ready..."
     sleep 10

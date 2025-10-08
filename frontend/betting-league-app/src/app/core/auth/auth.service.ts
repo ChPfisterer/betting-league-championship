@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, throwError, of } from 'rxjs';
 import { map, tap, catchError, switchMap } from 'rxjs/operators';
 import { jwtDecode } from 'jwt-decode';
 import { environment } from '../../../environments/environment';
@@ -427,26 +427,69 @@ export class AuthService {
       return throwError(() => 'No access token available');
     }
 
-    try {
-      const decoded: any = jwtDecode(token);
-      
-      const user: User = {
-        id: decoded.sub || '',
-        username: decoded.preferred_username || decoded.username || '',
-        email: decoded.email || '',
-        firstName: decoded.given_name || '',
-        lastName: decoded.family_name || '',
-        roles: decoded.realm_access?.roles || [],
-        isAdmin: decoded.realm_access?.roles?.includes('admin') || false
-      };
+    // Call the backend API to get the actual user data with UUID
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
 
-      return new Observable(observer => {
-        observer.next(user);
-        observer.complete();
-      });
-    } catch (error) {
-      return throwError(() => 'Invalid access token');
-    }
+    console.log('AuthService: Fetching user profile from API...');
+    console.log('AuthService: API URL:', `${this.API_URL}/users/me`);
+    console.log('AuthService: Authorization header present:', !!headers.Authorization);
+    
+    return this.http.get<any>(`${this.API_URL}/users/me`, { headers }).pipe(
+      tap(userProfile => {
+        console.log('AuthService: Raw API response from /users/me:', userProfile);
+      }),
+      map(userProfile => {
+        console.log('AuthService: Received user profile from API:', userProfile);
+        
+        // Also decode JWT for additional role information
+        let jwtRoles: string[] = [];
+        let isAdmin = false;
+        
+        try {
+          const decoded: any = jwtDecode(token);
+          jwtRoles = decoded.realm_access?.roles || [];
+          isAdmin = jwtRoles.includes('admin') || false;
+          console.log('AuthService: JWT decoded successfully, roles:', jwtRoles);
+        } catch (error) {
+          console.warn('AuthService: Could not decode JWT for roles:', error);
+        }
+        
+        const user: User = {
+          id: userProfile.id, // This is the actual UUID from the database
+          username: userProfile.username,
+          email: userProfile.email,
+          firstName: userProfile.first_name || '',
+          lastName: userProfile.last_name || '',
+          roles: jwtRoles,
+          isAdmin: isAdmin
+        };
+
+        console.log('AuthService: Created user object with real UUID:', user);
+        console.log('AuthService: User ID from API:', userProfile.id);
+        console.log('AuthService: User ID type:', typeof userProfile.id);
+        return user;
+      }),
+      catchError(error => {
+        console.error('AuthService: Failed to fetch user profile:', error);
+        console.error('AuthService: Error status:', error.status);
+        console.error('AuthService: Error details:', error.error);
+        
+        // Always fail if we can't get user info from backend
+        // This ensures we have the correct database UUID
+        if (error.status === 401 || error.status === 403) {
+          console.error('AuthService: Authentication failed, clearing tokens and redirecting to login');
+          this.clearTokens();
+          return throwError(() => 'Authentication failed - please login again');
+        }
+        
+        // For other errors (500, network issues), also fail but with different message
+        console.error('AuthService: Backend API error, cannot proceed without user profile');
+        return throwError(() => 'Authentication service error - please try again later');
+      })
+    );
   }
 
   private performLogout(): void {
@@ -484,6 +527,19 @@ export class AuthService {
 
   private clearAuthState(): void {
     localStorage.removeItem('auth_state');
+  }
+
+  /**
+   * Force refresh user info from backend API
+   */
+  refreshUserInfo(): Observable<User> {
+    console.log('AuthService: Force refreshing user info...');
+    return this.loadUserInfo().pipe(
+      tap((user) => {
+        console.log('AuthService: Force refresh completed, updating current user:', user);
+        this.currentUserSubject.next(user);
+      })
+    );
   }
 
   getAccessToken(): string | null {

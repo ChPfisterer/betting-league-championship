@@ -108,8 +108,14 @@ export class DashboardService {
    * Get user bets formatted for dashboard
    */
   getUserBets(): Observable<DashboardBet[]> {
+    console.log('DashboardService: Getting user bets...');
     return this.apiService.userBets$.pipe(
-      map(bets => bets.map(this.transformBetToDashboard.bind(this)))
+      map(bets => {
+        console.log('DashboardService: Raw bets from API service:', bets);
+        const transformed = bets.map(this.transformBetToDashboard.bind(this));
+        console.log('DashboardService: Transformed bets:', transformed);
+        return transformed;
+      })
     );
   }
 
@@ -184,11 +190,14 @@ export class DashboardService {
    */
   async loadDashboardData(): Promise<void> {
     const currentUser = this.authService.getCurrentUser();
+    console.log('DashboardService: Loading dashboard data for user:', currentUser);
+    
     if (!currentUser?.id) {
       console.error('No current user found');
       return;
     }
 
+    console.log('DashboardService: User ID:', currentUser.id);
     await this.apiService.loadDashboardData(currentUser.id);
   }
 

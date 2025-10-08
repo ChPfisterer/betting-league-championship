@@ -70,17 +70,26 @@ async def place_bet(
     logger = logging.getLogger(__name__)
     
     try:
-        logger.info(f"Placing bet for user {current_user.username}: {bet_data.model_dump()}")
+        logger.info(f"Placing bet for user {current_user.username} (ID: {current_user.id}): {bet_data.model_dump()}")
+        
+        # Validate user ID is UUID
+        if not current_user.id:
+            raise ValueError("User ID is required")
+        
         service = BetService(db)
         bet = service.create_bet(bet_data, current_user.id)
+        
         # Transform the model to response schema format
         bet_dict = service.transform_bet_for_response(bet)
+        logger.info(f"Bet placed successfully: ID {bet.id}")
+        
         return BetResponse.model_validate(bet_dict)
+        
     except ValueError as e:
-        logger.error(f"Bet placement validation failed: {e}")
+        logger.error(f"Bet placement validation failed for user {current_user.username}: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Unexpected error placing bet: {e}")
+        logger.error(f"Unexpected error placing bet for user {current_user.username}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
