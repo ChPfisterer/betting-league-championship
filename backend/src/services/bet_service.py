@@ -47,7 +47,7 @@ class BetService:
         Raises:
             ValueError: If validation fails
         """
-        # Validate user exists and has sufficient balance
+        # Validate user exists
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             raise ValueError(f"User with ID {user_id} not found")
@@ -62,43 +62,20 @@ class BetService:
         if not can_bet:
             raise ValueError(bet_message)
         
-        # Validate bet type specific requirements
-        self._validate_bet_type_requirements(bet_data)
+        # For prediction contest, validate that either outcome or scores are provided
+        if not bet_data.outcome and (bet_data.predicted_home_score is None or bet_data.predicted_away_score is None):
+            raise ValueError("Either outcome prediction or exact score prediction is required")
         
-        # Validate minimum stake amount
-        if bet_data.amount < 0.01:
-            raise ValueError("Minimum bet amount is 0.01")
-        
-        # Validate odds
-        if bet_data.odds < 1.01:
-            raise ValueError("Minimum odds is 1.01")
-        
-        # Validate potential payout calculation
-        expected_payout = bet_data.amount * bet_data.odds
-        if abs(bet_data.potential_payout - expected_payout) > 0.01:
-            raise ValueError(f"Potential payout ({bet_data.potential_payout}) does not match amount * odds ({expected_payout})")
-        
-        # Validate group if specified (Note: group_id field doesn't exist in Bet model yet)
-        # if bet_data.group_id:
-        #     group = self.db.query(Group).filter(Group.id == bet_data.group_id).first()
-        #     if not group:
-        #         raise ValueError(f"Group with ID {bet_data.group_id} not found")
-        #     
-        #     # Check if user is member of the group
-        #     # Note: This would need group membership validation
-        
-        # Create bet instance - Map schema types to model types
+        # Create bet instance for prediction contest
         bet = Bet(
             user_id=user_id,
             match_id=bet_data.match_id,
-            # group_id=bet_data.group_id,  # This field doesn't exist in model
-            bet_type=ModelBetType.SINGLE.value,  # Default to single bet for now
-            market_type=self._map_schema_bet_type_to_market_type(bet_data.bet_type).value,
-            stake_amount=float(bet_data.amount),  # Ensure proper decimal conversion
-            odds=float(bet_data.odds),
-            potential_payout=float(bet_data.potential_payout),
-            selection=bet_data.outcome.value if bet_data.outcome else None,  # Use selection instead of outcome
-            handicap=float(bet_data.handicap_value) if bet_data.handicap_value else None,  # Handle None values
+            bet_type=ModelBetType.SINGLE.value,  # Default to single bet
+            market_type=MarketType.MATCH_WINNER.value,  # Default to match winner for predictions
+            predicted_home_score=bet_data.predicted_home_score,
+            predicted_away_score=bet_data.predicted_away_score,
+            points_earned=0,  # Will be calculated when match is settled
+            selection=bet_data.outcome.value if bet_data.outcome else None,
             notes=bet_data.notes,
             status=BetStatus.PENDING.value,
             placed_at=datetime.now(timezone.utc),
@@ -110,16 +87,6 @@ class BetService:
         self.db.refresh(bet)
         
         return bet
-    
-    def _map_schema_bet_type_to_market_type(self, schema_bet_type: SchemaBetType) -> MarketType:
-        """Map schema BetType to model MarketType."""
-        mapping = {
-            SchemaBetType.MATCH_WINNER: MarketType.MATCH_WINNER,
-            SchemaBetType.TOTAL_GOALS: MarketType.OVER_UNDER,
-            SchemaBetType.HANDICAP: MarketType.HANDICAP,
-            # Add more mappings as needed
-        }
-        return mapping.get(schema_bet_type, MarketType.MATCH_WINNER)  # Default fallback
     
     def _validate_bet_type_requirements(self, bet_data: BetCreate) -> None:
         """Validate bet type specific requirements."""
@@ -172,22 +139,12 @@ class BetService:
                 "user_id": bet.user_id,
                 "match_id": bet.match_id,
                 "group_id": getattr(bet, 'group_id', None),
-                "bet_type": self._map_market_type_to_schema_bet_type(bet.market_type),
-                "amount": float(bet.stake_amount) if bet.stake_amount is not None else 0.0,
-                "odds": float(bet.odds) if bet.odds is not None else 1.0,
-                "potential_payout": float(bet.potential_payout) if bet.potential_payout is not None else 0.0,
-                "outcome": bet.selection,
-                "handicap_value": float(bet.handicap) if bet.handicap is not None else None,
-                "total_value": getattr(bet, 'total_value', None),
-                "is_over": getattr(bet, 'is_over', None),
-                "predicted_home_score": getattr(bet, 'predicted_home_score', None),
-                "predicted_away_score": getattr(bet, 'predicted_away_score', None),
-                "bet_parameters": getattr(bet, 'bet_parameters', None),
+                "outcome": bet.selection,  # outcome is stored in selection field
+                "predicted_home_score": bet.predicted_home_score,
+                "predicted_away_score": bet.predicted_away_score,
+                "points_earned": bet.points_earned,
                 "notes": bet.notes,
                 "status": self._map_model_status_to_schema_status(bet.status),
-                "actual_payout": float(bet.payout_amount) if hasattr(bet, 'payout_amount') and bet.payout_amount is not None else None,
-                "settled_at": getattr(bet, 'settled_at', None),
-                "settlement_reason": getattr(bet, 'settlement_reason', None),
                 "placed_at": bet.placed_at,
                 "created_at": bet.created_at,
                 "updated_at": bet.updated_at if hasattr(bet, 'updated_at') and bet.updated_at else bet.created_at,
@@ -394,13 +351,13 @@ class BetService:
     
     def get_user_statistics(self, user_id: UUID) -> Dict[str, Any]:
         """
-        Get comprehensive betting statistics for a user.
+        Get comprehensive prediction contest statistics for a user.
         
         Args:
             user_id: User unique identifier
             
         Returns:
-            Dictionary with betting statistics
+            Dictionary with prediction contest statistics
         """
         user_bets = self.db.query(Bet).filter(
             Bet.user_id == user_id,
@@ -409,55 +366,33 @@ class BetService:
         
         if not user_bets:
             return {
-                "total_bets": 0,
-                "total_amount": 0.0,
-                "total_payout": 0.0,
+                "total_predictions": 0,
+                "total_points": 0,
                 "win_rate": 0.0,
-                "profit_loss": 0.0,
-                "average_odds": 0.0
+                "average_points": 0.0
             }
         
-        total_bets = len(user_bets)
-        total_amount = sum(bet.amount for bet in user_bets)
-        total_payout = sum(bet.actual_payout or 0 for bet in user_bets)
+        total_predictions = len(user_bets)
+        total_points = sum(bet.points_earned for bet in user_bets)
         
-        won_bets = [bet for bet in user_bets if bet.status == BetStatus.WON]
-        lost_bets = [bet for bet in user_bets if bet.status == BetStatus.LOST]
-        pending_bets = [bet for bet in user_bets if bet.status == BetStatus.PENDING]
-        void_bets = [bet for bet in user_bets if bet.status == BetStatus.VOID]
+        won_bets = [bet for bet in user_bets if bet.points_earned > 0]
+        lost_bets = [bet for bet in user_bets if bet.points_earned == 0 and bet.status in [BetStatus.WON.value, BetStatus.LOST.value]]
+        pending_bets = [bet for bet in user_bets if bet.status == BetStatus.PENDING.value]
         
         settled_bets = won_bets + lost_bets
         win_rate = (len(won_bets) / len(settled_bets) * 100) if settled_bets else 0
         
-        profit_loss = total_payout - total_amount
-        average_odds = sum(bet.odds for bet in user_bets) / total_bets
-        
-        # Bet type breakdown
-        bet_type_stats = {}
-        for bet in user_bets:
-            bet_type = bet.bet_type
-            if bet_type not in bet_type_stats:
-                bet_type_stats[bet_type] = {
-                    "count": 0,
-                    "total_amount": 0.0,
-                    "won": 0,
-                    "lost": 0
-                }
-            bet_type_stats[bet_type]["count"] += 1
-            bet_type_stats[bet_type]["total_amount"] += bet.amount
-            if bet.status == BetStatus.WON:
-                bet_type_stats[bet_type]["won"] += 1
-            elif bet.status == BetStatus.LOST:
-                bet_type_stats[bet_type]["lost"] += 1
+        average_points = total_points / total_predictions if total_predictions > 0 else 0
         
         return {
-            "total_predictions": total_bets,
-            "total_points": sum(getattr(bet, 'points_earned', 0) for bet in user_bets),
-            "exact_score_predictions": len([bet for bet in user_bets if getattr(bet, 'points_earned', 0) == 3]),
-            "winner_only_predictions": len([bet for bet in user_bets if getattr(bet, 'points_earned', 0) == 1]),
-            "wrong_predictions": len([bet for bet in user_bets if getattr(bet, 'points_earned', 0) == 0]),
-            "accuracy_percentage": ((len(won_bets) + len([bet for bet in user_bets if getattr(bet, 'points_earned', 0) == 1])) / total_bets * 100) if total_bets > 0 else 0,
-            "average_points_per_prediction": (sum(getattr(bet, 'points_earned', 0) for bet in user_bets) / total_bets) if total_bets > 0 else 0
+            "total_predictions": total_predictions,
+            "total_points": total_points,
+            "exact_score_predictions": len([bet for bet in user_bets if bet.points_earned == 3]),
+            "winner_only_predictions": len([bet for bet in user_bets if bet.points_earned == 1]),
+            "wrong_predictions": len([bet for bet in user_bets if bet.points_earned == 0 and bet.status in [BetStatus.WON.value, BetStatus.LOST.value]]),
+            "pending_predictions": len(pending_bets),
+            "win_rate": win_rate,
+            "average_points_per_prediction": average_points
         }
     
     def get_match_statistics(self, match_id: UUID) -> Dict[str, Any]:

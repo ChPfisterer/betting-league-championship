@@ -213,10 +213,6 @@ export class DashboardService {
 
     const predictionData = {
       match_id: matchId,
-      bet_type: 'match_winner', // Keep for API compatibility 
-      amount: 0, // No financial amount in prediction contest
-      odds: 1, // No odds in prediction contest
-      potential_payout: 0, // No payout in prediction contest
       outcome: outcomeMap[prediction], // Map to backend enum
       predicted_home_score: homeScore,
       predicted_away_score: awayScore,
