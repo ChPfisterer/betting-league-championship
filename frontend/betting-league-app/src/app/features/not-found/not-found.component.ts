@@ -13,7 +13,7 @@ import { Router } from '@angular/router';
     <div class="not-found-container">
       <mat-card class="error-card">
         <mat-card-header>
-          <mat-icon class="error-icon">search_off</mat-icon>
+          <i class="fas fa-search-minus error-icon"></i>
           <mat-card-title>404 - Page Not Found</mat-card-title>
           <mat-card-subtitle>The page you're looking for doesn't exist</mat-card-subtitle>
         </mat-card-header>
@@ -23,11 +23,11 @@ import { Router } from '@angular/router';
         </mat-card-content>
         <mat-card-actions>
           <button mat-raised-button color="primary" (click)="goHome()">
-            <mat-icon>home</mat-icon>
+            <i class="fas fa-home"></i>
             Go to Dashboard
           </button>
           <button mat-raised-button (click)="goBack()">
-            <mat-icon>arrow_back</mat-icon>
+            <i class="fas fa-arrow-left"></i>
             Go Back
           </button>
         </mat-card-actions>
@@ -61,7 +61,7 @@ import { Router } from '@angular/router';
       margin-top: 20px;
     }
 
-    mat-icon {
+    i {
       margin-right: 8px;
     }
   `]

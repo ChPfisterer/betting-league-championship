@@ -31,7 +31,7 @@ import { ApiService } from '../../../core/services/api.service';
       <mat-card class="register-card">
         <mat-card-header>
           <div class="register-header">
-            <mat-icon class="register-icon">person_add</mat-icon>
+            <i class="fas fa-user-plus register-icon"></i>
             <mat-card-title>Join the Championship</mat-card-title>
             <mat-card-subtitle>Create your betting account</mat-card-subtitle>
           </div>
@@ -46,7 +46,7 @@ import { ApiService } from '../../../core/services/api.service';
                        type="text"
                        formControlName="firstName"
                        placeholder="Enter your first name">
-                <mat-icon matSuffix>person</mat-icon>
+                <i matSuffix class="fas fa-user"></i>
                 <mat-error *ngIf="registerForm.get('firstName')?.hasError('required')">
                   First name is required
                 </mat-error>
@@ -58,7 +58,7 @@ import { ApiService } from '../../../core/services/api.service';
                        type="text"
                        formControlName="lastName"
                        placeholder="Enter your last name">
-                <mat-icon matSuffix>person</mat-icon>
+                <i matSuffix class="fas fa-user"></i>
                 <mat-error *ngIf="registerForm.get('lastName')?.hasError('required')">
                   Last name is required
                 </mat-error>
@@ -71,7 +71,7 @@ import { ApiService } from '../../../core/services/api.service';
                      type="text"
                      formControlName="username"
                      placeholder="Choose a username">
-              <mat-icon matSuffix>account_circle</mat-icon>
+              <i matSuffix class="fas fa-user-circle"></i>
               <mat-error *ngIf="registerForm.get('username')?.hasError('required')">
                 Username is required
               </mat-error>
@@ -86,7 +86,7 @@ import { ApiService } from '../../../core/services/api.service';
                      type="email"
                      formControlName="email"
                      placeholder="Enter your email address">
-              <mat-icon matSuffix>email</mat-icon>
+              <i matSuffix class="fas fa-envelope"></i>
               <mat-error *ngIf="registerForm.get('email')?.hasError('required')">
                 Email is required
               </mat-error>
@@ -102,7 +102,7 @@ import { ApiService } from '../../../core/services/api.service';
                      formControlName="password"
                      placeholder="Create a strong password">
               <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword">
-                <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+                <i class="fas" [class.fa-eye-slash]="hidePassword" [class.fa-eye]="!hidePassword"></i>
               </button>
               <mat-error *ngIf="registerForm.get('password')?.hasError('required')">
                 Password is required
@@ -119,7 +119,7 @@ import { ApiService } from '../../../core/services/api.service';
                      formControlName="confirmPassword"
                      placeholder="Confirm your password">
               <button mat-icon-button matSuffix type="button" (click)="hideConfirmPassword = !hideConfirmPassword">
-                <mat-icon>{{hideConfirmPassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+                <i class="fas" [class.fa-eye-slash]="hideConfirmPassword" [class.fa-eye]="!hideConfirmPassword"></i>
               </button>
               <mat-error *ngIf="registerForm.get('confirmPassword')?.hasError('required')">
                 Please confirm your password

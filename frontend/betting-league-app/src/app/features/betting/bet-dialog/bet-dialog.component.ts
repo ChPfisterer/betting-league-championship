@@ -49,11 +49,11 @@ export interface BetPlacementResult {
     <div class="bet-dialog">
       <div class="dialog-header">
         <h2 mat-dialog-title>
-          <mat-icon>sports_soccer</mat-icon>
+          <i class="fas fa-futbol"></i>
           Make Your Prediction
         </h2>
         <button mat-icon-button (click)="onCancel()" class="close-button">
-          <mat-icon>close</mat-icon>
+          <i class="fas fa-times"></i>
         </button>
       </div>
 
@@ -79,7 +79,7 @@ export interface BetPlacementResult {
         <mat-card class="score-prediction-card">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>sports_score</mat-icon>
+              <i class="fas fa-calculator"></i>
               Score Prediction
             </mat-card-title>
             <mat-card-subtitle>Enter the final score to make your prediction</mat-card-subtitle>
@@ -121,7 +121,7 @@ export interface BetPlacementResult {
               </div>
               
               <div class="score-hint" *ngIf="hasValidScores()">
-                <mat-icon color="primary">check_circle</mat-icon>
+                <i class="fas fa-check-circle text-primary"></i>
                 <span>Predicting {{ data.match.homeTeam }} {{ predictedHomeScore }} - {{ predictedAwayScore }} {{ data.match.awayTeam }}</span>
               </div>
             </div>
@@ -132,7 +132,7 @@ export interface BetPlacementResult {
         <mat-card class="prediction-summary-card" *ngIf="isValidPrediction()">>
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>preview</mat-icon>
+              <i class="fas fa-eye"></i>
               Your Prediction
             </mat-card-title>
           </mat-card-header>
@@ -161,7 +161,7 @@ export interface BetPlacementResult {
             (click)="onMakePrediction()"
             [disabled]="!isValidPrediction()"
             class="make-prediction-button">
-            <mat-icon>check_circle</mat-icon>
+            <i class="fas fa-check-circle"></i>
             Submit Prediction
           </button>
         </div>

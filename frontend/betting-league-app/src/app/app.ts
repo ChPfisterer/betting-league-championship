@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -6,7 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+// import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AuthService } from './core/auth/auth.service';
+import { FontAwesomeService } from './core/services/fontawesome.service';
 
 @Component({
   selector: 'app-root',
@@ -22,13 +24,21 @@ import { AuthService } from './core/auth/auth.service';
   templateUrl: './app.component.html',
   styleUrl: './app.scss'
 })
-export class App {
+export class App implements OnInit {
   title = 'Betting League Championship';
   
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private fontAwesomeService: FontAwesomeService
   ) {}
+
+  ngOnInit(): void {
+    // Load FontAwesome kit dynamically
+    this.fontAwesomeService.loadFontAwesome().catch(error => {
+      console.warn('FontAwesome failed to load, using fallback styling:', error);
+    });
+  }
 
   get isAuthenticated$() {
     return this.authService.isAuthenticated$;

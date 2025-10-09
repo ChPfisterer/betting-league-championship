@@ -73,7 +73,7 @@ interface Bet extends DashboardBet {}
         <mat-card class="welcome-card">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>sports</mat-icon>
+              <i class="fas fa-trophy"></i>
               Welcome back, {{ currentUser?.firstName || currentUser?.username || 'Champion' }}!
             </mat-card-title>
             <mat-card-subtitle>Your predictions dashboard • {{ getCurrentTime() }}</mat-card-subtitle>
@@ -102,7 +102,7 @@ interface Bet extends DashboardBet {}
             <!-- Live Matches Tab -->
             <mat-tab>
               <ng-template mat-tab-label>
-                <mat-icon>live_tv</mat-icon>
+                <i class="fas fa-tv"></i>
                 Live Matches
                 <mat-chip *ngIf="liveMatches.length > 0" [matBadge]="liveMatches.length" matBadgePosition="after">
                   {{ liveMatches.length }}
@@ -111,7 +111,7 @@ interface Bet extends DashboardBet {}
               
               <div class="tab-content">
                 <div *ngIf="liveMatches.length === 0" class="no-data">
-                  <mat-icon>sports_soccer</mat-icon>
+                  <i class="fas fa-futbol"></i>
                   <h3>No live matches</h3>
                   <p>Matches currently being played will appear here</p>
                 </div>
@@ -128,7 +128,7 @@ interface Bet extends DashboardBet {}
                           <span *ngIf="match.stage" class="match-stage">{{ match.stage }}</span>
                         </div>
                         <mat-chip color="accent">
-                          <mat-icon>live_tv</mat-icon>
+                          <i class="fas fa-tv text-red-500"></i>
                           LIVE {{ match.liveData?.minute }}'
                         </mat-chip>
                       </div>
@@ -182,7 +182,7 @@ interface Bet extends DashboardBet {}
             <!-- Upcoming Matches Tab -->
             <mat-tab>
               <ng-template mat-tab-label>
-                <mat-icon>schedule</mat-icon>
+                <i class="fas fa-clock"></i>
                 Upcoming
                 <mat-chip *ngIf="upcomingMatches.length > 0" [matBadge]="upcomingMatches.length" matBadgePosition="after">
                   {{ upcomingMatches.length }}
@@ -191,7 +191,7 @@ interface Bet extends DashboardBet {}
               
               <div class="tab-content">
                 <div *ngIf="upcomingMatches.length === 0" class="no-data">
-                  <mat-icon>schedule</mat-icon>
+                  <i class="fas fa-clock"></i>
                   <h3>No upcoming matches</h3>
                   <p>Scheduled matches will appear here</p>
                 </div>
@@ -246,14 +246,14 @@ interface Bet extends DashboardBet {}
                                   class="score-increment"
                                   (click)="incrementScore(match, 'home')"
                                   [disabled]="getScoreValue(match.predictedHomeScore) >= 20">
-                                  <mat-icon>keyboard_arrow_up</mat-icon>
+                                  <i class="fas fa-chevron-up"></i>
                                 </button>
                                 <button 
                                   mat-icon-button 
                                   class="score-decrement"
                                   (click)="decrementScore(match, 'home')"
                                   [disabled]="getScoreValue(match.predictedHomeScore) <= 0">
-                                  <mat-icon>keyboard_arrow_down</mat-icon>
+                                  <i class="fas fa-chevron-down"></i>
                                 </button>
                               </div>
                             </div>
@@ -283,14 +283,14 @@ interface Bet extends DashboardBet {}
                                   class="score-increment"
                                   (click)="incrementScore(match, 'away')"
                                   [disabled]="getScoreValue(match.predictedAwayScore) >= 20">
-                                  <mat-icon>keyboard_arrow_up</mat-icon>
+                                  <i class="fas fa-chevron-up"></i>
                                 </button>
                                 <button 
                                   mat-icon-button 
                                   class="score-decrement"
                                   (click)="decrementScore(match, 'away')"
                                   [disabled]="getScoreValue(match.predictedAwayScore) <= 0">
-                                  <mat-icon>keyboard_arrow_down</mat-icon>
+                                  <i class="fas fa-chevron-down"></i>
                                 </button>
                               </div>
                             </div>
@@ -307,7 +307,7 @@ interface Bet extends DashboardBet {}
                             (click)="submitPrediction(match)"
                             [disabled]="!isValidPrediction(match)"
                             class="submit-prediction-btn">
-                            <mat-icon>check_circle</mat-icon>
+                            <i class="fas fa-circle-check"></i>
                             Submit Prediction (3 pts)
                           </button>
                         </div>
@@ -321,7 +321,7 @@ interface Bet extends DashboardBet {}
             <!-- Recent Matches Tab -->
             <mat-tab>
               <ng-template mat-tab-label>
-                <mat-icon>history</mat-icon>
+                <i class="fas fa-clock-rotate-left"></i>
                 Recent
                 <mat-chip *ngIf="recentMatches.length > 0" [matBadge]="recentMatches.length" matBadgePosition="after">
                   {{ recentMatches.length }}
@@ -330,7 +330,7 @@ interface Bet extends DashboardBet {}
               
               <div class="tab-content">
                 <div *ngIf="recentMatches.length === 0" class="no-data">
-                  <mat-icon>history</mat-icon>
+                  <i class="fas fa-clock-rotate-left"></i>
                   <h3>No recent matches</h3>
                   <p>Completed matches will appear here</p>
                 </div>
@@ -348,7 +348,7 @@ interface Bet extends DashboardBet {}
                                        class="stage-panel">
                       <mat-expansion-panel-header>
                         <mat-panel-title>
-                          <mat-icon [class]="'stage-icon ' + getStageColor(group.stage)">{{ getStageIcon(group.stage) }}</mat-icon>
+                          <i [class]="'stage-icon ' + getStageColor(group.stage) + ' ' + getStageIconClass(group.stage)"></i>
                           {{ group.stage }}
                         </mat-panel-title>
                         <mat-panel-description>
@@ -397,7 +397,7 @@ interface Bet extends DashboardBet {}
             <!-- My Predictions Tab -->
             <mat-tab>
               <ng-template mat-tab-label>
-                <mat-icon>receipt</mat-icon>
+                <i class="fas fa-receipt"></i>
                 My Predictions
                 <mat-chip *ngIf="userBets.length > 0" [matBadge]="userBets.length" matBadgePosition="after">
                   {{ userBets.length }}
@@ -406,11 +406,11 @@ interface Bet extends DashboardBet {}
               
               <div class="tab-content">
                 <div *ngIf="userBets.length === 0" class="no-data">
-                  <mat-icon>receipt</mat-icon>
+                  <i class="fas fa-receipt"></i>
                   <h3>No predictions made yet</h3>
                   <p>Start making predictions on your favorite matches!</p>
                   <button mat-raised-button color="primary" (click)="navigateToMatches()">
-                    <mat-icon>sports</mat-icon>
+                    <i class="fas fa-trophy"></i>
                     Browse Matches
                   </button>
                 </div>
@@ -421,7 +421,7 @@ interface Bet extends DashboardBet {}
                       <div class="bet-header">
                         <span class="bet-match">{{ bet.match }}</span>
                         <mat-chip [color]="getBetStatusColor(bet.status)">
-                          <mat-icon>{{ getBetStatusIcon(bet.status) }}</mat-icon>
+                          <i [class]="getBetStatusIconClass(bet.status)"></i>
                           {{ bet.status | titlecase }}
                         </mat-chip>
                       </div>
@@ -448,7 +448,7 @@ interface Bet extends DashboardBet {}
             <!-- Leagues Tab -->
             <mat-tab>
               <ng-template mat-tab-label>
-                <mat-icon>emoji_events</mat-icon>
+                <i class="fas fa-medal"></i>
                 Leagues
                 <mat-chip *ngIf="leagues.length > 0" [matBadge]="leagues.length" matBadgePosition="after">
                   {{ leagues.length }}
@@ -457,7 +457,7 @@ interface Bet extends DashboardBet {}
               
               <div class="tab-content">
                 <div *ngIf="leagues.length === 0" class="no-data">
-                  <mat-icon>emoji_events</mat-icon>
+                  <i class="fas fa-medal"></i>
                   <h3>No leagues available</h3>
                   <p>Leagues will appear here when competitions are scheduled</p>
                 </div>
@@ -466,7 +466,7 @@ interface Bet extends DashboardBet {}
                   <mat-card *ngFor="let league of leagues" class="league-card" (click)="viewLeague(league)">
                     <mat-card-header>
                       <mat-card-title>
-                        <mat-icon>{{ league.icon }}</mat-icon>
+                        <i class="fas fa-futbol"></i>
                         {{ league.name }}
                       </mat-card-title>
                       <mat-card-subtitle>{{ league.country }} • {{ league.season }}</mat-card-subtitle>
@@ -480,7 +480,7 @@ interface Bet extends DashboardBet {}
                     
                     <mat-card-actions>
                       <button mat-button color="primary">
-                        <mat-icon>sports</mat-icon>
+                        <i class="fas fa-trophy"></i>
                         View Matches
                       </button>
                     </mat-card-actions>
@@ -558,7 +558,7 @@ interface Bet extends DashboardBet {}
               </mat-progress-bar>
               <div class="rank-actions">
                 <button mat-raised-button color="primary">
-                  <mat-icon>leaderboard</mat-icon>
+                  <i class="fas fa-ranking-star"></i>
                   View Full Leaderboard
                 </button>
               </div>
@@ -638,7 +638,7 @@ interface Bet extends DashboardBet {}
       justify-content: center;
     }
 
-    .user-avatar mat-icon {
+    .user-avatar i {
       color: #666;
       font-size: 24px;
     }
@@ -689,7 +689,7 @@ interface Bet extends DashboardBet {}
       color: #666;
     }
 
-    .no-data mat-icon {
+    .no-data i {
       font-size: 64px;
       width: 64px;
       height: 64px;
@@ -1039,8 +1039,8 @@ interface Bet extends DashboardBet {}
       padding: 0;
     }
 
-    .score-increment .mat-icon,
-    .score-decrement .mat-icon {
+    .score-increment i,
+    .score-decrement i {
       font-size: 16px;
       width: 16px;
       height: 16px;
@@ -1244,7 +1244,7 @@ interface Bet extends DashboardBet {}
       background: white;
     }
 
-    mat-chip mat-icon {
+    mat-chip i {
       margin-right: 4px !important;
       font-size: 16px;
     }
@@ -1541,6 +1541,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  getBetStatusIconClass(status: string): string {
+    switch (status) {
+      case 'pending': return 'fas fa-hourglass-half text-warning';
+      case 'won': return 'fas fa-circle-check text-success';
+      case 'lost': return 'fas fa-circle-xmark text-danger';
+      default: return 'fas fa-circle-question text-muted';
+    }
+  }
+
   /**
    * Group matches by stage for better organization
    */
@@ -1666,6 +1675,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
           return 'group_work';
         }
         return 'sports_soccer';
+    }
+  }
+
+  getStageIconClass(stage: string): string {
+    switch (stage) {
+      case 'Final': return 'fas fa-trophy';
+      case '3rd Place Play-off': return 'fas fa-medal';
+      case 'Semi-final': return 'fas fa-award';
+      case 'Quarter-final': return 'fas fa-shield-alt';
+      case 'Round of 16': return 'fas fa-futbol';
+      case 'Group Stage': return 'fas fa-users';
+      default: 
+        // Handle Group A, B, C, etc.
+        if (stage.startsWith('Group ')) {
+          return 'fas fa-user-friends';
+        }
+        return 'fas fa-futbol';
     }
   }
 
