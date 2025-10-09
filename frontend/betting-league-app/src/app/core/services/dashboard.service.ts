@@ -19,8 +19,6 @@ export interface DashboardMatch {
   match_type: string;
   liveData?: any;
   isInPlay?: boolean;
-  // Temporary mock odds for compatibility (will be removed later)
-  odds: { home: number; draw: number; away: number };
 }
 
 export interface DashboardBet {
@@ -225,7 +223,7 @@ export class DashboardService {
   /**
    * Legacy method name for backward compatibility
    */
-  placeBet(matchId: string, prediction: 'home' | 'draw' | 'away', odds: number = 1): Observable<any> {
+  placeBet(matchId: string, prediction: 'home' | 'draw' | 'away'): Observable<any> {
     return this.placePrediction(matchId, prediction);
   }
 
@@ -246,9 +244,7 @@ export class DashboardService {
       homeScore: match.home_score,
       awayScore: match.away_score,
       match_type: match.match_type || 'regular',
-      liveData: match.status === 'live' ? this.generateLiveData() : undefined,
-      // Temporary mock odds for compatibility
-      odds: { home: 2.0, draw: 3.0, away: 2.5 }
+      liveData: match.status === 'live' ? this.generateLiveData() : undefined
     };
   }
 

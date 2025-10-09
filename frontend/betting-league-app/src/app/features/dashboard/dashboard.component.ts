@@ -139,18 +139,15 @@ interface Bet extends DashboardBet {}
                           <img [src]="match.awayTeamLogo" [alt]="match.awayTeam" class="team-logo">
                         </div>
                       </div>
-                      <div class="betting-odds">
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'home')">
-                          <span class="odds-label">{{ match.homeTeam }}</span>
-                          <span class="odds-value">{{ match.odds.home }}</span>
+                      <div class="prediction-buttons">
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'home')">
+                          <span class="button-label">{{ match.homeTeam }}</span>
                         </button>
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'draw')">
-                          <span class="odds-label">Draw</span>
-                          <span class="odds-value">{{ match.odds.draw }}</span>
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'draw')">
+                          <span class="button-label">Draw</span>
                         </button>
-                        <button mat-stroked-button class="odds-button" (click)="placeBet(match, 'away')">
-                          <span class="odds-label">{{ match.awayTeam }}</span>
-                          <span class="odds-value">{{ match.odds.away }}</span>
+                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'away')">
+                          <span class="button-label">{{ match.awayTeam }}</span>
                         </button>
                       </div>
                     </mat-card-content>
@@ -449,29 +446,25 @@ interface Bet extends DashboardBet {}
       overflow: hidden;
     }
 
-    .betting-odds {
+    .prediction-buttons {
       display: flex;
       gap: 8px;
       margin-top: 16px;
     }
 
-    .odds-button {
+    .predict-button {
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 8px;
-      min-height: 60px;
+      padding: 12px 8px;
+      min-height: 50px;
+      justify-content: center;
+      align-items: center;
     }
 
-    .odds-label {
-      font-size: 0.8rem;
-      margin-bottom: 4px;
-    }
-
-    .odds-value {
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: #2196f3;
+    .button-label {
+      font-size: 0.9rem;
+      font-weight: 500;
     }
 
     .bets-list {
@@ -670,7 +663,7 @@ interface Bet extends DashboardBet {}
         gap: 12px;
       }
 
-      .betting-odds {
+      .prediction-buttons {
         flex-direction: column;
       }
 
@@ -739,7 +732,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       awayScore: 2,
       stage: 'Premier League',
       match_type: 'regular',
-      odds: { home: 2.1, draw: 3.2, away: 3.8 },
       liveData: {
         minute: 67,
         possession: { home: 45, away: 55 }
@@ -758,7 +750,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       awayScore: 1,
       stage: 'La Liga',
       match_type: 'regular',
-      odds: { home: 1.9, draw: 3.4, away: 4.2 },
       liveData: {
         minute: 34,
         possession: { home: 62, away: 38 }
@@ -777,8 +768,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       kickoff: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
       status: 'upcoming',
       stage: 'Premier League',
-      match_type: 'regular',
-      odds: { home: 2.3, draw: 3.1, away: 2.9 }
+      match_type: 'regular'
     },
     {
       id: '4',
@@ -790,8 +780,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       kickoff: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 hours from now
       status: 'upcoming',
       stage: 'Bundesliga',
-      match_type: 'regular',
-      odds: { home: 1.7, draw: 3.8, away: 4.5 }
+      match_type: 'regular'
     },
     {
       id: '5',
@@ -803,8 +792,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       kickoff: new Date(Date.now() + 6 * 60 * 60 * 1000), // 6 hours from now
       status: 'upcoming',
       stage: 'NBA',
-      match_type: 'regular',
-      odds: { home: 1.9, draw: 21.0, away: 2.1 }
+      match_type: 'regular'
     }
   ];
 
@@ -919,7 +907,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // For now, just show a console message
     const predictionText = prediction === 'home' ? match.homeTeam : 
                           prediction === 'away' ? match.awayTeam : 'Draw';
-    alert(`Betting on: ${predictionText} @ ${match.odds[prediction]}\n\nThis would open the betting slip in a real application.`);
+    alert(`Making prediction: ${predictionText}\n\nThis would open the prediction dialog in a real application.`);
   }
 
   viewLeague(league: League): void {

@@ -17,11 +17,6 @@ export interface BetDialogData {
     homeTeam: string;
     awayTeam: string;
     kickoff: Date;
-    odds: {
-      home: number;
-      draw: number;
-      away: number;
-    };
     status: string;
   };
   selectedPrediction: 'home' | 'draw' | 'away';
@@ -30,7 +25,6 @@ export interface BetDialogData {
 export interface BetPlacementResult {
   matchId: string;
   prediction: 'home' | 'draw' | 'away';
-  odds: number;
 }
 
 @Component({
@@ -77,17 +71,16 @@ export interface BetPlacementResult {
               </div>
             </div>
 
-            <!-- Betting Options -->
-            <div class="betting-options">
-              <div class="odds-row">
+            <!-- Prediction Options -->
+            <div class="prediction-options">
+              <div class="options-row">
                 <button 
                   mat-stroked-button 
                   [class.selected]="selectedPrediction === 'home'"
                   (click)="selectPrediction('home')"
-                  class="odds-option">
-                  <div class="odds-content">
+                  class="prediction-option">
+                  <div class="option-content">
                     <span class="team-name">{{ data.match.homeTeam }}</span>
-                    <span class="odds-value">{{ data.match.odds.home | number:'1.2-2' }}</span>
                   </div>
                 </button>
 
@@ -95,10 +88,9 @@ export interface BetPlacementResult {
                   mat-stroked-button 
                   [class.selected]="selectedPrediction === 'draw'"
                   (click)="selectPrediction('draw')"
-                  class="odds-option">
-                  <div class="odds-content">
+                  class="prediction-option">
+                  <div class="option-content">
                     <span class="team-name">Draw</span>
-                    <span class="odds-value">{{ data.match.odds.draw | number:'1.2-2' }}</span>
                   </div>
                 </button>
 
@@ -106,10 +98,9 @@ export interface BetPlacementResult {
                   mat-stroked-button 
                   [class.selected]="selectedPrediction === 'away'"
                   (click)="selectPrediction('away')"
-                  class="odds-option">
-                  <div class="odds-content">
+                  class="prediction-option">
+                  <div class="option-content">
                     <span class="team-name">{{ data.match.awayTeam }}</span>
-                    <span class="odds-value">{{ data.match.odds.away | number:'1.2-2' }}</span>
                   </div>
                 </button>
               </div>
@@ -130,14 +121,10 @@ export interface BetPlacementResult {
               <span class="label">You predict:</span>
               <span class="value prediction-text">{{ getPredictionText() }}</span>
             </div>
-            <div class="summary-row">
-              <span class="label">Odds:</span>
-              <span class="value">{{ getSelectedOdds() | number:'1.2-2' }}</span>
-            </div>
             <mat-divider></mat-divider>
             <div class="summary-row total">
-              <span class="label">Potential Points:</span>
-              <span class="value potential-points">{{ calculatePotentialPoints() }} pts</span>
+              <span class="label">Scoring:</span>
+              <span class="value potential-points">1 pt (winner) or 3 pts (exact score)</span>
             </div>
           </mat-card-content>
         </mat-card>
@@ -220,17 +207,17 @@ export interface BetPlacementResult {
       font-size: 14px;
     }
 
-    .betting-options {
+    .prediction-options {
       margin-top: 20px;
     }
 
-    .odds-row {
+    .options-row {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
     }
 
-    .odds-option {
+    .prediction-option {
       background: rgba(255, 255, 255, 0.1);
       border: 2px solid rgba(255, 255, 255, 0.3);
       color: white;
@@ -238,18 +225,18 @@ export interface BetPlacementResult {
       transition: all 0.3s ease;
     }
 
-    .odds-option:hover {
+    .prediction-option:hover {
       background: rgba(255, 255, 255, 0.2);
       border-color: rgba(255, 255, 255, 0.6);
     }
 
-    .odds-option.selected {
+    .prediction-option.selected {
       background: rgba(255, 255, 255, 0.3);
       border-color: white;
       box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
     }
 
-    .odds-content {
+    .option-content {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -332,7 +319,7 @@ export interface BetPlacementResult {
         max-height: 100vh;
       }
 
-      .odds-row {
+      .options-row {
         grid-template-columns: 1fr;
         gap: 12px;
       }
@@ -382,10 +369,6 @@ export class BetDialogComponent implements OnInit {
     return this.selectedPrediction !== null;
   }
 
-  getSelectedOdds(): number {
-    return this.data.match.odds[this.selectedPrediction];
-  }
-
   getPredictionText(): string {
     switch (this.selectedPrediction) {
       case 'home':
@@ -400,17 +383,15 @@ export class BetDialogComponent implements OnInit {
   }
 
   calculatePotentialPoints(): number {
-    const odds = this.getSelectedOdds();
-    // Points = odds * 10 (base multiplier) 
-    return Math.round(odds * 10);
+    // In prediction contest: 1 point for correct outcome, 3 points for exact score
+    return 3; // Maximum possible points
   }
 
   onMakePrediction(): void {
     if (this.isValidPrediction()) {
       const result: BetPlacementResult = {
         matchId: this.data.match.id,
-        prediction: this.selectedPrediction,
-        odds: this.getSelectedOdds()
+        prediction: this.selectedPrediction
       };
 
       this.dialogRef.close(result);

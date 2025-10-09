@@ -152,18 +152,15 @@ interface Bet extends DashboardBet {}
                         </div>
                       </div>
                       
-                      <div class="prediction-odds">
+                      <div class="prediction-buttons">
                         <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'home')">
-                          <span class="odds-label">{{ match.homeTeam }}</span>
-                          <span class="odds-value">{{ match.odds.home }}</span>
+                          <span class="button-label">{{ match.homeTeam }}</span>
                         </button>
                         <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'draw')">
-                          <span class="odds-label">Draw</span>
-                          <span class="odds-value">{{ match.odds.draw }}</span>
+                          <span class="button-label">Draw</span>
                         </button>
                         <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'away')">
-                          <span class="odds-label">{{ match.awayTeam }}</span>
-                          <span class="odds-value">{{ match.odds.away }}</span>
+                          <span class="button-label">{{ match.awayTeam }}</span>
                         </button>
                       </div>
                     </mat-card-content>
@@ -218,18 +215,15 @@ interface Bet extends DashboardBet {}
                         </div>
                       </div>
                       
-                      <div class="prediction-odds">
+                      <div class="prediction-buttons">
                         <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'home')">
-                          <span class="odds-label">{{ match.homeTeam }}</span>
-                          <span class="odds-value">{{ match.odds.home }}</span>
+                          <span class="button-label">{{ match.homeTeam }}</span>
                         </button>
                         <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'draw')">
-                          <span class="odds-label">Draw</span>
-                          <span class="odds-value">{{ match.odds.draw }}</span>
+                          <span class="button-label">Draw</span>
                         </button>
                         <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'away')">
-                          <span class="odds-label">{{ match.awayTeam }}</span>
-                          <span class="odds-value">{{ match.odds.away }}</span>
+                          <span class="button-label">{{ match.awayTeam }}</span>
                         </button>
                       </div>
                     </mat-card-content>
@@ -895,7 +889,7 @@ interface Bet extends DashboardBet {}
       background: #ff5722;
     }
 
-    .prediction-odds {
+    .prediction-buttons {
       display: flex;
       gap: 8px;
       margin-top: 16px;
@@ -905,19 +899,15 @@ interface Bet extends DashboardBet {}
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 8px;
-      min-height: 60px;
+      padding: 12px 8px;
+      min-height: 50px;
+      justify-content: center;
+      align-items: center;
     }
 
-    .odds-label {
-      font-size: 0.8rem;
-      margin-bottom: 4px;
-    }
-
-    .odds-value {
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: #2196f3;
+    .button-label {
+      font-size: 0.9rem;
+      font-weight: 500;
     }
 
     .bets-list {
@@ -1322,12 +1312,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       // Log the loaded data for debugging
       this.dashboardService.getLiveMatches().subscribe((matches: DashboardMatch[]) => {
         console.log('Loaded live matches:', matches);
-        console.log('Sample live match odds:', matches[0]?.odds);
       });
       
       this.dashboardService.getUpcomingMatches().subscribe((matches: DashboardMatch[]) => {
         console.log('Loaded upcoming matches:', matches);
-        console.log('Sample upcoming match odds:', matches[0]?.odds);
       });
       
       this.isLoading = false;
@@ -1584,7 +1572,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       console.log('Authentication validated, proceeding with prediction...');
 
       console.log('Making prediction for:', { match, prediction });
-      console.log('Match odds:', match.odds);
 
       // Create dialog data
       const dialogData: BetDialogData = {
@@ -1593,7 +1580,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           homeTeam: match.homeTeam,
           awayTeam: match.awayTeam,
           kickoff: match.kickoff,
-          odds: match.odds,
           status: match.status
         },
         selectedPrediction: prediction
@@ -1615,14 +1601,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       dialogRef.afterClosed().subscribe((result: BetPlacementResult | null) => {
         console.log('Dialog closed with result:', result);
         if (result) {
-          // Calculate potential points
-          const potentialPoints = Math.round(result.odds * 10);
+          // Calculate potential points for prediction contest
+          const potentialPoints = 3; // Maximum points possible
           
           // Place the prediction via the service
           this.dashboardService.placeBet(
             result.matchId, 
-            result.prediction, 
-            result.odds
+            result.prediction
           ).subscribe({
             next: (prediction) => {
               console.log('Prediction placed successfully:', prediction);
@@ -1656,8 +1641,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                     // Retry the prediction with the new token
                     this.dashboardService.placeBet(
                       result.matchId, 
-                      result.prediction, 
-                      result.odds
+                      result.prediction
                     ).subscribe({
                       next: (prediction) => {
                         console.log('Prediction placed successfully after token refresh:', prediction);

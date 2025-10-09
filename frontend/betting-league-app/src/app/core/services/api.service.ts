@@ -70,7 +70,6 @@ export interface Match {
   awayTeamLogo?: string;
   kickoff?: Date;
   liveData?: any;
-  odds?: { home: number; draw: number; away: number };
 }
 
 export interface Bet {
