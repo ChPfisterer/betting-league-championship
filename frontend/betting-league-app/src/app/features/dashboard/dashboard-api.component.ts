@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +16,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { DashboardService, DashboardMatch, DashboardBet, DashboardStats, DashboardLeague } from '../../core/services/dashboard.service';
@@ -22,9 +25,12 @@ import { BetDialogComponent, BetDialogData, BetPlacementResult } from '../bettin
 import { Subscription, firstValueFrom, of } from 'rxjs';
 import { take, tap, catchError } from 'rxjs/operators';
 
-// Use interfaces from dashboard service
+// Use interfaces from dashboard service and extend with prediction fields
 interface League extends DashboardLeague {}
-interface Match extends DashboardMatch {}
+interface Match extends DashboardMatch {
+  predictedHomeScore?: number | null;
+  predictedAwayScore?: number | null;
+}
 interface UserStats extends DashboardStats {}
 interface Bet extends DashboardBet {}
 
@@ -33,6 +39,8 @@ interface Bet extends DashboardBet {}
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -47,7 +55,9 @@ interface Bet extends DashboardBet {}
     MatExpansionModule,
     MatToolbarModule,
     MatMenuModule,
-    MatDialogModule
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule
   ],
   template: `
     <div class="dashboard-container">
@@ -211,20 +221,96 @@ interface Bet extends DashboardBet {}
                         <div class="vs-divider">vs</div>
                         <div class="team">
                           <span class="team-name">{{ match.awayTeam }}</span>
-                          <img [src]="match.awayTeamLogo" alt="{{ match.awayTeam }}" class="team-logo" />
                         </div>
                       </div>
                       
-                      <div class="prediction-buttons">
-                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'home')">
-                          <span class="button-label">{{ match.homeTeam }}</span>
-                        </button>
-                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'draw')">
-                          <span class="button-label">Draw</span>
-                        </button>
-                        <button mat-stroked-button class="predict-button" (click)="placeBet(match, 'away')">
-                          <span class="button-label">{{ match.awayTeam }}</span>
-                        </button>
+                      <div class="prediction-section">
+                        <div class="score-inputs">
+                          <div class="score-input-group">
+                            <label class="score-label">{{ match.homeTeam }}</label>
+                            <div class="score-input-container">
+                              <mat-form-field appearance="outline" class="score-field">
+                                <input 
+                                  matInput 
+                                  type="text" 
+                                  [value]="getDisplayScore(match.predictedHomeScore)"
+                                  (input)="onScoreInput(match, 'home', $event)"
+                                  (focus)="onScoreFocus(match, 'home', $event)"
+                                  (blur)="onScoreBlur(match, 'home', $event)"
+                                  (keydown)="onScoreKeydown($event)"
+                                  placeholder="-">
+                              </mat-form-field>
+                              <div class="score-controls">
+                                <button 
+                                  mat-icon-button 
+                                  class="score-increment"
+                                  (click)="incrementScore(match, 'home')"
+                                  [disabled]="getScoreValue(match.predictedHomeScore) >= 20">
+                                  <mat-icon>keyboard_arrow_up</mat-icon>
+                                </button>
+                                <button 
+                                  mat-icon-button 
+                                  class="score-decrement"
+                                  (click)="decrementScore(match, 'home')"
+                                  [disabled]="getScoreValue(match.predictedHomeScore) <= 0">
+                                  <mat-icon>keyboard_arrow_down</mat-icon>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div class="score-separator">
+                            <span>-</span>
+                          </div>
+                          
+                          <div class="score-input-group">
+                            <label class="score-label">{{ match.awayTeam }}</label>
+                            <div class="score-input-container">
+                              <mat-form-field appearance="outline" class="score-field">
+                                <input 
+                                  matInput 
+                                  type="text" 
+                                  [value]="getDisplayScore(match.predictedAwayScore)"
+                                  (input)="onScoreInput(match, 'away', $event)"
+                                  (focus)="onScoreFocus(match, 'away', $event)"
+                                  (blur)="onScoreBlur(match, 'away', $event)"
+                                  (keydown)="onScoreKeydown($event)"
+                                  placeholder="-">
+                              </mat-form-field>
+                              <div class="score-controls">
+                                <button 
+                                  mat-icon-button 
+                                  class="score-increment"
+                                  (click)="incrementScore(match, 'away')"
+                                  [disabled]="getScoreValue(match.predictedAwayScore) >= 20">
+                                  <mat-icon>keyboard_arrow_up</mat-icon>
+                                </button>
+                                <button 
+                                  mat-icon-button 
+                                  class="score-decrement"
+                                  (click)="decrementScore(match, 'away')"
+                                  [disabled]="getScoreValue(match.predictedAwayScore) <= 0">
+                                  <mat-icon>keyboard_arrow_down</mat-icon>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div class="prediction-status" *ngIf="isValidPrediction(match)">
+                          <div class="prediction-preview">
+                            {{ getPredictionPreview(match) }}
+                          </div>
+                          <button 
+                            mat-raised-button 
+                            color="primary" 
+                            (click)="submitPrediction(match)"
+                            [disabled]="!isValidPrediction(match)"
+                            class="submit-prediction-btn">
+                            <mat-icon>check_circle</mat-icon>
+                            Submit Prediction (3 pts)
+                          </button>
+                        </div>
                       </div>
                     </mat-card-content>
                   </mat-card>
@@ -889,25 +975,109 @@ interface Bet extends DashboardBet {}
       background: #ff5722;
     }
 
-    .prediction-buttons {
+    .prediction-section {
+      margin-top: 16px;
+      padding: 16px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    .score-inputs {
       display: flex;
-      gap: 8px;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .score-input-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .score-input-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .score-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #666;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    .score-field {
+      width: 60px;
+      margin: 0;
+    }
+
+    .score-field .mat-mdc-form-field-infix {
+      min-height: 40px;
+    }
+
+    .score-field input {
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .score-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .score-increment,
+    .score-decrement {
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      min-width: 24px;
+      padding: 0;
+    }
+
+    .score-increment .mat-icon,
+    .score-decrement .mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      line-height: 16px;
+    }
+
+    .score-increment:hover:not(:disabled),
+    .score-decrement:hover:not(:disabled) {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+
+    .score-increment:disabled,
+    .score-decrement:disabled {
+      opacity: 0.3;
+    }
+
+    .score-separator {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #666;
+      margin: 0 8px;
       margin-top: 16px;
     }
 
-    .predict-button {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 12px 8px;
-      min-height: 50px;
-      justify-content: center;
-      align-items: center;
+    .prediction-status {
+      text-align: center;
     }
 
-    .button-label {
+    .prediction-preview {
       font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 8px;
       font-weight: 500;
+    }
+
+    .submit-prediction-btn {
+      min-width: 200px;
     }
 
     .bets-list {
@@ -1233,10 +1403,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.dashboardService.getUpcomingMatches().subscribe({
         next: (matches) => {
-          // Sort upcoming matches by date (earliest first)
+          // Sort upcoming matches by date (earliest first) and initialize prediction scores
           this.upcomingMatches = matches.sort((a, b) => 
             new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime()
-          );
+          ).map(match => ({
+            ...match,
+            predictedHomeScore: null,
+            predictedAwayScore: null
+          }));
         },
         error: (error) => {
           console.error('Error loading upcoming matches:', error);
@@ -1581,8 +1755,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           awayTeam: match.awayTeam,
           kickoff: match.kickoff,
           status: match.status
-        },
-        selectedPrediction: prediction
+        }
       };
 
       console.log('Opening prediction dialog with data:', dialogData);
@@ -1602,17 +1775,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.log('Dialog closed with result:', result);
         if (result) {
           // Calculate potential points for prediction contest
-          const potentialPoints = 3; // Maximum points possible
+          const hasScores = result.predictedHomeScore !== null && result.predictedAwayScore !== null;
+          const potentialPoints = hasScores ? 3 : 1; // 3 points for exact score, 1 for winner only
           
           // Place the prediction via the service
-          this.dashboardService.placeBet(
+          this.dashboardService.placePrediction(
             result.matchId, 
-            result.prediction
+            result.prediction,
+            result.predictedHomeScore ?? undefined,
+            result.predictedAwayScore ?? undefined
           ).subscribe({
             next: (prediction) => {
               console.log('Prediction placed successfully:', prediction);
+              const scoreText = hasScores ? ` (${result.predictedHomeScore}-${result.predictedAwayScore})` : '';
               this.snackBar.open(
-                `Prediction submitted! 🎯 Potential points: ${potentialPoints}`, 
+                `Prediction submitted! 🎯${scoreText} Potential points: ${potentialPoints}`, 
                 'Close', 
                 {
                   duration: 5000,
@@ -1719,6 +1896,139 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // this.router.navigate(['/settings']);
   }
 
+  // New score input handling methods
+  getDisplayScore(score: number | null | undefined): string {
+    return score !== null && score !== undefined ? score.toString() : '-';
+  }
+
+  getScoreValue(score: number | null | undefined): number {
+    return score !== null && score !== undefined ? score : 0;
+  }
+
+  incrementScore(match: Match, team: 'home' | 'away'): void {
+    const currentScore = team === 'home' ? match.predictedHomeScore : match.predictedAwayScore;
+    
+    // If score is null/undefined (showing "-"), start with 0
+    if (currentScore === null || currentScore === undefined) {
+      if (team === 'home') {
+        match.predictedHomeScore = 0;
+      } else {
+        match.predictedAwayScore = 0;
+      }
+      this.updateMatchPrediction(match);
+      return;
+    }
+    
+    // If score is already set, increment up to max of 20
+    if (currentScore < 20) {
+      const newValue = currentScore + 1;
+      if (team === 'home') {
+        match.predictedHomeScore = newValue;
+      } else {
+        match.predictedAwayScore = newValue;
+      }
+      this.updateMatchPrediction(match);
+    }
+  }
+
+  decrementScore(match: Match, team: 'home' | 'away'): void {
+    const currentScore = team === 'home' ? match.predictedHomeScore : match.predictedAwayScore;
+    const currentValue = currentScore !== null && currentScore !== undefined ? currentScore : 0;
+    
+    if (currentValue > 0) {
+      const newValue = currentValue - 1;
+      if (team === 'home') {
+        match.predictedHomeScore = newValue;
+      } else {
+        match.predictedAwayScore = newValue;
+      }
+      this.updateMatchPrediction(match);
+    }
+  }
+
+  onScoreKeydown(event: KeyboardEvent): void {
+    // Allow: backspace, delete, tab, escape, enter, and .
+    if ([46, 8, 9, 27, 13, 110, 190].indexOf(event.keyCode) !== -1 ||
+      // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+      (event.keyCode === 65 && event.ctrlKey === true) ||
+      (event.keyCode === 67 && event.ctrlKey === true) ||
+      (event.keyCode === 86 && event.ctrlKey === true) ||
+      (event.keyCode === 88 && event.ctrlKey === true) ||
+      // Allow: home, end, left, right
+      (event.keyCode >= 35 && event.keyCode <= 39)) {
+      return;
+    }
+    // Ensure that it is a number and stop the keypress if not
+    if ((event.shiftKey || (event.keyCode < 48 || event.keyCode > 57)) && (event.keyCode < 96 || event.keyCode > 105)) {
+      event.preventDefault();
+    }
+  }
+
+  onScoreFocus(match: Match, team: 'home' | 'away', event: FocusEvent): void {
+    const input = event.target as HTMLInputElement;
+    const currentScore = team === 'home' ? match.predictedHomeScore : match.predictedAwayScore;
+    
+    // If no score set, clear the dash and start with empty field
+    if (currentScore === null || currentScore === undefined) {
+      input.value = '';
+    } else {
+      // Select all existing content for easy replacement
+      input.select();
+    }
+  }
+
+  onScoreBlur(match: Match, team: 'home' | 'away', event: FocusEvent): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.trim();
+    
+    // If empty, show dash and set to null
+    if (value === '' || value === '-') {
+      if (team === 'home') {
+        match.predictedHomeScore = null;
+      } else {
+        match.predictedAwayScore = null;
+      }
+      input.value = '-';
+    }
+  }
+
+  onScoreInput(match: Match, team: 'home' | 'away', event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let value = input.value;
+
+    // Remove any non-digit characters except dash
+    value = value.replace(/[^0-9-]/g, '');
+    
+    // Handle dash as empty/null state
+    if (value === '-' || value === '') {
+      if (team === 'home') {
+        match.predictedHomeScore = null;
+      } else {
+        match.predictedAwayScore = null;
+      }
+      return;
+    }
+
+    // Parse as number and validate
+    const numValue = parseInt(value, 10);
+    
+    if (!isNaN(numValue) && numValue >= 0 && numValue <= 20) {
+      if (team === 'home') {
+        match.predictedHomeScore = numValue;
+      } else {
+        match.predictedAwayScore = numValue;
+      }
+      input.value = numValue.toString();
+    } else {
+      // Invalid input - revert to previous value or dash
+      const currentScore = team === 'home' ? match.predictedHomeScore : match.predictedAwayScore;
+      input.value = currentScore !== null && currentScore !== undefined ? currentScore.toString() : '-';
+    }
+
+    // Update the prediction preview
+    this.updateMatchPrediction(match);
+  }
+
   logout(): void {
     this.authService.logout().subscribe({
       next: () => {
@@ -1731,6 +2041,111 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.error('Logout error:', error);
         // Even if logout API fails, clear local session
         this.router.navigate(['/login']);
+      }
+    });
+  }
+
+  // New score prediction methods
+  updateMatchPrediction(match: Match): void {
+    // This method is called when user types in score inputs
+    // The ngModel binding automatically updates the match object
+    console.log('Updated prediction for match:', match.id, {
+      homeScore: match.predictedHomeScore,
+      awayScore: match.predictedAwayScore
+    });
+  }
+
+  getPredictionPreview(match: Match): string {
+    const homeScore = match.predictedHomeScore;
+    const awayScore = match.predictedAwayScore;
+    
+    if (homeScore === null || homeScore === undefined || awayScore === null || awayScore === undefined) {
+      return '';
+    }
+    
+    const scoreText = `${homeScore} - ${awayScore}`;
+    
+    if (homeScore > awayScore) {
+      return `${match.homeTeam} wins (${scoreText})`;
+    } else if (awayScore > homeScore) {
+      return `${match.awayTeam} wins (${scoreText})`;
+    } else {
+      return `Draw (${scoreText})`;
+    }
+  }
+
+  isValidPrediction(match: Match): boolean {
+    return match.predictedHomeScore !== null && 
+           match.predictedHomeScore !== undefined && 
+           match.predictedAwayScore !== null && 
+           match.predictedAwayScore !== undefined &&
+           match.predictedHomeScore >= 0 && 
+           match.predictedAwayScore >= 0;
+  }
+
+  getPredictionFromScores(homeScore: number, awayScore: number): 'home' | 'draw' | 'away' {
+    if (homeScore > awayScore) {
+      return 'home';
+    } else if (awayScore > homeScore) {
+      return 'away';
+    } else {
+      return 'draw';
+    }
+  }
+
+  submitPrediction(match: Match): void {
+    if (!this.isValidPrediction(match)) {
+      this.snackBar.open('Please enter valid scores for both teams', 'Close', {
+        duration: 3000,
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    const prediction = this.getPredictionFromScores(match.predictedHomeScore!, match.predictedAwayScore!);
+    
+    console.log('Submitting prediction:', {
+      matchId: match.id,
+      prediction,
+      homeScore: match.predictedHomeScore,
+      awayScore: match.predictedAwayScore
+    });
+
+    this.dashboardService.placePrediction(
+      match.id,
+      prediction,
+      match.predictedHomeScore!,
+      match.predictedAwayScore!
+    ).subscribe({
+      next: (result) => {
+        console.log('Prediction submitted successfully:', result);
+        const scoreText = `${match.predictedHomeScore}-${match.predictedAwayScore}`;
+        this.snackBar.open(
+          `Prediction submitted! 🎯 ${scoreText} (3 points possible)`, 
+          'Close', 
+          {
+            duration: 5000,
+            panelClass: ['success-snackbar']
+          }
+        );
+        
+        // Clear the scores after successful submission
+        match.predictedHomeScore = null;
+        match.predictedAwayScore = null;
+        
+        // Refresh dashboard data
+        this.loadDashboardData();
+      },
+      error: (error) => {
+        console.error('Error submitting prediction:', error);
+        this.snackBar.open(
+          'Failed to submit prediction. Please try again.', 
+          'Close', 
+          {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          }
+        );
       }
     });
   }
