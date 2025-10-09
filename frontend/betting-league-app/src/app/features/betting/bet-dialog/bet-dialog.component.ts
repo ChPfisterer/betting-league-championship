@@ -17,20 +17,15 @@ export interface BetDialogData {
     homeTeam: string;
     awayTeam: string;
     kickoff: Date;
-    odds: {
-      home: number;
-      draw: number;
-      away: number;
-    };
     status: string;
   };
-  selectedPrediction: 'home' | 'draw' | 'away';
 }
 
 export interface BetPlacementResult {
   matchId: string;
   prediction: 'home' | 'draw' | 'away';
-  odds: number;
+  predictedHomeScore?: number | null;
+  predictedAwayScore?: number | null;
 }
 
 @Component({
@@ -77,48 +72,64 @@ export interface BetPlacementResult {
               </div>
             </div>
 
-            <!-- Betting Options -->
-            <div class="betting-options">
-              <div class="odds-row">
-                <button 
-                  mat-stroked-button 
-                  [class.selected]="selectedPrediction === 'home'"
-                  (click)="selectPrediction('home')"
-                  class="odds-option">
-                  <div class="odds-content">
-                    <span class="team-name">{{ data.match.homeTeam }}</span>
-                    <span class="odds-value">{{ data.match.odds.home | number:'1.2-2' }}</span>
-                  </div>
-                </button>
+          </mat-card-content>
+        </mat-card>
 
-                <button 
-                  mat-stroked-button 
-                  [class.selected]="selectedPrediction === 'draw'"
-                  (click)="selectPrediction('draw')"
-                  class="odds-option">
-                  <div class="odds-content">
-                    <span class="team-name">Draw</span>
-                    <span class="odds-value">{{ data.match.odds.draw | number:'1.2-2' }}</span>
-                  </div>
-                </button>
-
-                <button 
-                  mat-stroked-button 
-                  [class.selected]="selectedPrediction === 'away'"
-                  (click)="selectPrediction('away')"
-                  class="odds-option">
-                  <div class="odds-content">
-                    <span class="team-name">{{ data.match.awayTeam }}</span>
-                    <span class="odds-value">{{ data.match.odds.away | number:'1.2-2' }}</span>
-                  </div>
-                </button>
+        <!-- Score Prediction -->
+        <mat-card class="score-prediction-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>sports_score</mat-icon>
+              Score Prediction
+            </mat-card-title>
+            <mat-card-subtitle>Enter the final score to make your prediction</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="score-inputs" [formGroup]="betForm">
+              <div class="score-input-row">
+                <div class="team-score-input">
+                  <label class="score-label">{{ data.match.homeTeam }}</label>
+                  <mat-form-field appearance="outline" class="score-field">
+                    <input 
+                      matInput 
+                      type="number" 
+                      min="0" 
+                      max="20" 
+                      formControlName="homeScore"
+                      (input)="onScoreChange()"
+                      placeholder="0">
+                  </mat-form-field>
+                </div>
+                
+                <div class="vs-separator">
+                  <span>-</span>
+                </div>
+                
+                <div class="team-score-input">
+                  <label class="score-label">{{ data.match.awayTeam }}</label>
+                  <mat-form-field appearance="outline" class="score-field">
+                    <input 
+                      matInput 
+                      type="number" 
+                      min="0" 
+                      max="20" 
+                      formControlName="awayScore"
+                      (input)="onScoreChange()"
+                      placeholder="0">
+                  </mat-form-field>
+                </div>
+              </div>
+              
+              <div class="score-hint" *ngIf="hasValidScores()">
+                <mat-icon color="primary">check_circle</mat-icon>
+                <span>Predicting {{ data.match.homeTeam }} {{ predictedHomeScore }} - {{ predictedAwayScore }} {{ data.match.awayTeam }}</span>
               </div>
             </div>
           </mat-card-content>
         </mat-card>
 
         <!-- Prediction Summary -->
-        <mat-card class="prediction-summary-card" *ngIf="isValidPrediction()">
+        <mat-card class="prediction-summary-card" *ngIf="isValidPrediction()">>
           <mat-card-header>
             <mat-card-title>
               <mat-icon>preview</mat-icon>
@@ -130,14 +141,10 @@ export interface BetPlacementResult {
               <span class="label">You predict:</span>
               <span class="value prediction-text">{{ getPredictionText() }}</span>
             </div>
-            <div class="summary-row">
-              <span class="label">Odds:</span>
-              <span class="value">{{ getSelectedOdds() | number:'1.2-2' }}</span>
-            </div>
             <mat-divider></mat-divider>
             <div class="summary-row total">
-              <span class="label">Potential Points:</span>
-              <span class="value potential-points">{{ calculatePotentialPoints() }} pts</span>
+              <span class="label">Scoring:</span>
+              <span class="value potential-points">3 points (exact score prediction)</span>
             </div>
           </mat-card-content>
         </mat-card>
@@ -220,17 +227,17 @@ export interface BetPlacementResult {
       font-size: 14px;
     }
 
-    .betting-options {
+    .prediction-options {
       margin-top: 20px;
     }
 
-    .odds-row {
+    .options-row {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
     }
 
-    .odds-option {
+    .prediction-option {
       background: rgba(255, 255, 255, 0.1);
       border: 2px solid rgba(255, 255, 255, 0.3);
       color: white;
@@ -238,18 +245,18 @@ export interface BetPlacementResult {
       transition: all 0.3s ease;
     }
 
-    .odds-option:hover {
+    .prediction-option:hover {
       background: rgba(255, 255, 255, 0.2);
       border-color: rgba(255, 255, 255, 0.6);
     }
 
-    .odds-option.selected {
+    .prediction-option.selected {
       background: rgba(255, 255, 255, 0.3);
       border-color: white;
       box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
     }
 
-    .odds-content {
+    .option-content {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -258,6 +265,95 @@ export interface BetPlacementResult {
 
     .team-name {
       font-size: 12px;
+      font-weight: 500;
+    }
+
+    .score-prediction-card {
+      margin: 16px 0;
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+    }
+
+    .score-toggle {
+      margin-bottom: 16px;
+    }
+
+    .toggle-score-button {
+      color: #1976d2;
+      border: 1px solid #1976d2;
+      background: transparent;
+      transition: all 0.3s ease;
+    }
+
+    .toggle-score-button.active {
+      background: #1976d2;
+      color: white;
+    }
+
+    .score-inputs {
+      margin-top: 16px;
+    }
+
+    .score-input-row {
+      display: flex;
+      align-items: end;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .team-score-input {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 120px;
+    }
+
+    .score-label {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #333;
+      text-align: center;
+    }
+
+    .score-field {
+      width: 80px;
+    }
+
+    .score-field ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
+
+    .score-field ::ng-deep .mat-mdc-text-field-wrapper {
+      background: white;
+    }
+
+    .score-field input {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .vs-separator {
+      display: flex;
+      align-items: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #666;
+      margin: 0 8px;
+      margin-top: 24px;
+    }
+
+    .score-hint {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: #e8f5e8;
+      border-radius: 8px;
+      color: #2e7d32;
+      font-size: 14px;
       font-weight: 500;
     }
 
@@ -332,7 +428,7 @@ export interface BetPlacementResult {
         max-height: 100vh;
       }
 
-      .odds-row {
+      .options-row {
         grid-template-columns: 1fr;
         gap: 12px;
       }
@@ -355,54 +451,85 @@ export interface BetPlacementResult {
 })
 export class BetDialogComponent implements OnInit {
   betForm: FormGroup;
-  selectedPrediction: 'home' | 'draw' | 'away';
+  predictedHomeScore: number | null = null;
+  predictedAwayScore: number | null = null;
 
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<BetDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: BetDialogData
   ) {
-    this.selectedPrediction = data.selectedPrediction;
-    
     this.betForm = this.fb.group({
-      // Form for future prediction fields if needed
+      homeScore: [null, [Validators.required, Validators.min(0), Validators.max(20)]],
+      awayScore: [null, [Validators.required, Validators.min(0), Validators.max(20)]]
     });
   }
 
   ngOnInit(): void {
     // Component is ready
-    console.log('Prediction dialog ready');
+    console.log('Score prediction dialog ready');
   }
 
-  selectPrediction(prediction: 'home' | 'draw' | 'away'): void {
-    this.selectedPrediction = prediction;
+  // Derive winner from scores
+  get selectedPrediction(): 'home' | 'draw' | 'away' {
+    const homeScore = this.predictedHomeScore;
+    const awayScore = this.predictedAwayScore;
+    
+    if (homeScore === null || awayScore === null) {
+      return 'home'; // Default, but validation will prevent submission
+    }
+    
+    if (homeScore > awayScore) {
+      return 'home';
+    } else if (awayScore > homeScore) {
+      return 'away';
+    } else {
+      return 'draw';
+    }
   }
 
   isValidPrediction(): boolean {
-    return this.selectedPrediction !== null;
+    return this.betForm.valid && 
+           this.predictedHomeScore !== null && 
+           this.predictedAwayScore !== null;
   }
 
-  getSelectedOdds(): number {
-    return this.data.match.odds[this.selectedPrediction];
+  onScoreChange(): void {
+    const homeScore = this.betForm.get('homeScore')?.value;
+    const awayScore = this.betForm.get('awayScore')?.value;
+    
+    this.predictedHomeScore = homeScore !== null && homeScore !== '' ? Number(homeScore) : null;
+    this.predictedAwayScore = awayScore !== null && awayScore !== '' ? Number(awayScore) : null;
+  }
+
+  hasValidScores(): boolean {
+    return this.predictedHomeScore !== null && this.predictedAwayScore !== null &&
+           this.predictedHomeScore >= 0 && this.predictedAwayScore >= 0;
   }
 
   getPredictionText(): string {
-    switch (this.selectedPrediction) {
+    if (this.predictedHomeScore === null || this.predictedAwayScore === null) {
+      return 'Enter scores to make prediction';
+    }
+    
+    const winner = this.selectedPrediction;
+    const scoreText = `${this.predictedHomeScore} - ${this.predictedAwayScore}`;
+    
+    switch (winner) {
       case 'home':
-        return this.data.match.homeTeam;
+        return `${this.data.match.homeTeam} wins (${scoreText})`;
       case 'away':
-        return this.data.match.awayTeam;
+        return `${this.data.match.awayTeam} wins (${scoreText})`;
       case 'draw':
-        return 'Draw';
+        return `Draw (${scoreText})`;
       default:
-        return '';
+        return scoreText;
     }
   }
 
   calculatePotentialPoints(): number {
-    const odds = this.getSelectedOdds();
-    // Points = odds * 10 (base multiplier) 
-    return Math.round(odds * 10);
+    // In prediction contest: 1 point for correct outcome, 3 points for exact score
+    return 3; // Maximum possible points
   }
 
   onMakePrediction(): void {
@@ -410,7 +537,8 @@ export class BetDialogComponent implements OnInit {
       const result: BetPlacementResult = {
         matchId: this.data.match.id,
         prediction: this.selectedPrediction,
-        odds: this.getSelectedOdds()
+        predictedHomeScore: this.predictedHomeScore,
+        predictedAwayScore: this.predictedAwayScore
       };
 
       this.dialogRef.close(result);
