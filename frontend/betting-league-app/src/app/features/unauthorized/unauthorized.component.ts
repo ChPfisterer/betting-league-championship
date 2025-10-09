@@ -14,7 +14,7 @@ import { AuthService } from '../../core/auth/auth.service';
     <div class="unauthorized-container">
       <mat-card class="error-card">
         <mat-card-header>
-          <mat-icon class="error-icon">lock</mat-icon>
+          <i class="fas fa-lock error-icon"></i>
           <mat-card-title>Access Denied</mat-card-title>
           <mat-card-subtitle>You don't have permission to access this resource</mat-card-subtitle>
         </mat-card-header>
@@ -24,11 +24,11 @@ import { AuthService } from '../../core/auth/auth.service';
         </mat-card-content>
         <mat-card-actions>
           <button mat-raised-button color="primary" (click)="goHome()">
-            <mat-icon>home</mat-icon>
+            <i class="fas fa-home"></i>
             Go to Dashboard
           </button>
           <button mat-raised-button (click)="login()">
-            <mat-icon>login</mat-icon>
+            <i class="fas fa-sign-in-alt"></i>
             Login Again
           </button>
         </mat-card-actions>
@@ -62,7 +62,7 @@ import { AuthService } from '../../core/auth/auth.service';
       margin-top: 20px;
     }
 
-    mat-icon {
+    i {
       margin-right: 8px;
     }
   `]

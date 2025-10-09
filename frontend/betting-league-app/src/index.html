@@ -3,11 +3,21 @@
 <head>
   <meta charset="utf-8">
   <title>BettingLeagueApp</title>
+  <!-- FontAwesome kit will be loaded dynamically via FontAwesome service -->
+  <!-- This keeps the kit ID secure and not committed to version control -->
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
   <app-root></app-root>
+  
+  <!-- Optional: Set FontAwesome kit ID from environment variable -->
+  <script>
+    // This can be set by your deployment process
+    if (typeof window !== 'undefined') {
+      window.__fontawesome_kit_id = '{{FONTAWESOME_KIT_ID}}';
+    }
+  </script>
 </body>
 </html>

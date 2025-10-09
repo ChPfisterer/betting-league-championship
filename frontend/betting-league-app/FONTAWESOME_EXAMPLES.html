@@ -1,0 +1,57 @@
+<!-- BEFORE: Material Icons -->
+<mat-card-title>
+  <mat-icon>sports</mat-icon>
+  Welcome back, {{ currentUser?.firstName }}!
+</mat-card-title>
+
+<!-- AFTER: FontAwesome Icons -->
+<mat-card-title>
+  <fa-icon [icon]="['fas', 'trophy']"></fa-icon>
+  Welcome back, {{ currentUser?.firstName }}!
+</mat-card-title>
+
+<!-- ===== MORE EXAMPLES ===== -->
+
+<!-- BEFORE: Soccer icon -->
+<mat-icon>sports_soccer</mat-icon>
+
+<!-- AFTER: Football icon -->
+<fa-icon [icon]="['fas', 'futbol']"></fa-icon>
+
+<!-- BEFORE: Schedule icon -->
+<mat-icon>schedule</mat-icon>
+
+<!-- AFTER: Clock icon -->
+<fa-icon [icon]="['fas', 'clock']"></fa-icon>
+
+<!-- BEFORE: Arrow icons for score increment -->
+<mat-icon>keyboard_arrow_up</mat-icon>
+<mat-icon>keyboard_arrow_down</mat-icon>
+
+<!-- AFTER: Chevron icons -->
+<fa-icon [icon]="['fas', 'chevron-up']"></fa-icon>
+<fa-icon [icon]="['fas', 'chevron-down']"></fa-icon>
+
+<!-- BEFORE: Check circle -->
+<mat-icon>check_circle</mat-icon>
+
+<!-- AFTER: Circle check -->
+<fa-icon [icon]="['fas', 'circle-check']"></fa-icon>
+
+<!-- ===== STYLING EXAMPLES ===== -->
+
+<!-- Size variations -->
+<fa-icon [icon]="['fas', 'futbol']" size="lg"></fa-icon>
+<fa-icon [icon]="['fas', 'trophy']" size="2x"></fa-icon>
+
+<!-- Color styling -->
+<fa-icon [icon]="['fas', 'circle-check']" class="text-success"></fa-icon>
+<fa-icon [icon]="['fas', 'futbol']" [styles]="{'color': '#4caf50'}"></fa-icon>
+
+<!-- Combined with buttons (your increment/decrement example) -->
+<button mat-icon-button (click)="incrementScore(match, 'home')">
+  <fa-icon [icon]="['fas', 'chevron-up']"></fa-icon>
+</button>
+<button mat-icon-button (click)="decrementScore(match, 'home')">
+  <fa-icon [icon]="['fas', 'chevron-down']"></fa-icon>
+</button>

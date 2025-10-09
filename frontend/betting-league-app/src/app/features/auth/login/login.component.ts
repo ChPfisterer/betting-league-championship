@@ -24,7 +24,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       <mat-card class="login-card">
         <mat-card-header>
           <div class="login-header">
-            <mat-icon class="login-icon">sports_soccer</mat-icon>
+            <i class="fas fa-futbol login-icon"></i>
             <mat-card-title>Betting League Championship</mat-card-title>
             <mat-card-subtitle>Secure Authentication via Keycloak</mat-card-subtitle>
           </div>
@@ -37,19 +37,19 @@ import { AuthService } from '../../../core/auth/auth.service';
             
             <div class="features-list">
               <div class="feature-item">
-                <mat-icon color="primary">security</mat-icon>
+                <i class="fas fa-shield-alt text-primary"></i>
                 <span>Enterprise-grade security</span>
               </div>
               <div class="feature-item">
-                <mat-icon color="primary">verified_user</mat-icon>
+                <i class="fas fa-user-check text-primary"></i>
                 <span>Single Sign-On (SSO)</span>
               </div>
               <div class="feature-item">
-                <mat-icon color="primary">group</mat-icon>
+                <i class="fas fa-users text-primary"></i>
                 <span>Centralized user management</span>
               </div>
               <div class="feature-item">
-                <mat-icon color="primary">sports_soccer</mat-icon>
+                <i class="fas fa-futbol text-primary"></i>
                 <span>Access to betting platform</span>
               </div>
             </div>
@@ -62,7 +62,7 @@ import { AuthService } from '../../../core/auth/auth.service';
                     (click)="loginWithKeycloak()"
                     [disabled]="isLoading">
               <mat-spinner diameter="20" *ngIf="isLoading && authAction === 'login'"></mat-spinner>
-              <mat-icon *ngIf="!isLoading">login</mat-icon>
+              <i *ngIf="!isLoading" class="fas fa-sign-in-alt"></i>
               <span *ngIf="!isLoading">Sign In</span>
               <span *ngIf="isLoading && authAction === 'login'">Redirecting...</span>
             </button>
@@ -73,14 +73,14 @@ import { AuthService } from '../../../core/auth/auth.service';
                     (click)="registerWithKeycloak()"
                     [disabled]="isLoading">
               <mat-spinner diameter="20" *ngIf="isLoading && authAction === 'register'"></mat-spinner>
-              <mat-icon *ngIf="!isLoading">person_add</mat-icon>
+              <i *ngIf="!isLoading" class="fas fa-user-plus"></i>
               <span *ngIf="!isLoading">Create Account</span>
               <span *ngIf="isLoading && authAction === 'register'">Redirecting...</span>
             </button>
           </div>
 
           <div class="info-section">
-            <mat-icon class="info-icon">info</mat-icon>
+            <i class="fas fa-info-circle info-icon"></i>
             <p class="info-text">
               You'll be securely redirected to our Keycloak authentication service. 
               Your credentials are never stored on our platform.
@@ -149,7 +149,7 @@ import { AuthService } from '../../../core/auth/auth.service';
       color: #555;
     }
 
-    .feature-item mat-icon {
+    .feature-item i {
       margin-right: 12px;
       font-size: 20px;
     }

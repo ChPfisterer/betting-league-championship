@@ -31,7 +31,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
       <!-- Header -->
       <div class="profile-header">
         <button mat-icon-button (click)="goBack()" class="back-button">
-          <mat-icon>arrow_back</mat-icon>
+          <i class="fas fa-arrow-left"></i>
         </button>
         <h1>My Profile</h1>
       </div>
@@ -49,7 +49,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
         <mat-card class="user-info-card">
           <mat-card-header>
             <div class="user-avatar" mat-card-avatar>
-              <mat-icon>person</mat-icon>
+              <i class="fas fa-user"></i>
             </div>
             <mat-card-title>{{ currentUser?.firstName || 'User' }} {{ currentUser?.lastName || '' }}</mat-card-title>
             <mat-card-subtitle>{{ currentUser?.email || 'No email provided' }}</mat-card-subtitle>
@@ -58,7 +58,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
           <mat-card-content>
             <div class="user-details">
               <div class="detail-item">
-                <mat-icon>account_circle</mat-icon>
+                <i class="fas fa-user-circle"></i>
                 <div class="detail-content">
                   <span class="detail-label">Username</span>
                   <span class="detail-value">{{ currentUser?.username || 'Not set' }}</span>
@@ -66,7 +66,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
               </div>
 
               <div class="detail-item">
-                <mat-icon>email</mat-icon>
+                <i class="fas fa-envelope"></i>
                 <div class="detail-content">
                   <span class="detail-label">Email Address</span>
                   <span class="detail-value">{{ currentUser?.email || 'Not provided' }}</span>
@@ -74,7 +74,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
               </div>
 
               <div class="detail-item">
-                <mat-icon>badge</mat-icon>
+                <i class="fas fa-id-badge"></i>
                 <div class="detail-content">
                   <span class="detail-label">User ID</span>
                   <span class="detail-value">{{ currentUser?.id || 'N/A' }}</span>
@@ -82,7 +82,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
               </div>
 
               <div class="detail-item">
-                <mat-icon>security</mat-icon>
+                <i class="fas fa-shield-alt"></i>
                 <div class="detail-content">
                   <span class="detail-label">Roles</span>
                   <div class="roles-container">
@@ -97,7 +97,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
               </div>
 
               <div class="detail-item">
-                <mat-icon>admin_panel_settings</mat-icon>
+                <i class="fas fa-user-shield"></i>
                 <div class="detail-content">
                   <span class="detail-label">Admin Status</span>
                   <mat-chip [class]="currentUser?.isAdmin ? 'admin-chip' : 'user-chip'">
@@ -113,7 +113,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
         <mat-card class="auth-status-card">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>verified_user</mat-icon>
+              <i class="fas fa-user-check"></i>
               Authentication Status
             </mat-card-title>
           </mat-card-header>
@@ -121,17 +121,17 @@ import { AuthService, User } from '../../core/auth/auth.service';
           <mat-card-content>
             <div class="auth-status">
               <div class="status-item">
-                <mat-icon class="status-icon success">check_circle</mat-icon>
+                <i class="fas fa-check-circle status-icon success"></i>
                 <span>Successfully authenticated via Keycloak</span>
               </div>
               
               <div class="status-item">
-                <mat-icon class="status-icon success">token</mat-icon>
+                <i class="fas fa-key status-icon success"></i>
                 <span>Valid access token present</span>
               </div>
 
               <div class="status-item" *ngIf="isAuthenticated">
-                <mat-icon class="status-icon success">schedule</mat-icon>
+                <i class="fas fa-clock status-icon success"></i>
                 <span>Session active</span>
               </div>
             </div>
@@ -142,7 +142,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
         <mat-card class="actions-card">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>settings</mat-icon>
+              <i class="fas fa-cog"></i>
               Account Actions
             </mat-card-title>
           </mat-card-header>
@@ -151,17 +151,17 @@ import { AuthService, User } from '../../core/auth/auth.service';
             <div class="action-buttons">
               <button mat-raised-button color="primary" (click)="refreshProfile()" [disabled]="isRefreshing">
                 <mat-spinner diameter="20" *ngIf="isRefreshing"></mat-spinner>
-                <mat-icon *ngIf="!isRefreshing">refresh</mat-icon>
+                <i *ngIf="!isRefreshing" class="fas fa-sync-alt"></i>
                 {{ isRefreshing ? 'Refreshing...' : 'Refresh Profile' }}
               </button>
 
               <button mat-stroked-button color="accent" (click)="viewDashboard()">
-                <mat-icon>dashboard</mat-icon>
+                <i class="fas fa-tachometer-alt"></i>
                 Back to Dashboard
               </button>
 
               <button mat-stroked-button color="warn" (click)="testAuthStatus()">
-                <mat-icon>bug_report</mat-icon>
+                <i class="fas fa-bug"></i>
                 Test Auth Status
               </button>
             </div>
@@ -172,7 +172,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
         <mat-card class="logout-card">
           <mat-card-header>
             <mat-card-title class="logout-title">
-              <mat-icon>logout</mat-icon>
+              <i class="fas fa-sign-out-alt"></i>
               Sign Out
             </mat-card-title>
             <mat-card-subtitle>End your current session</mat-card-subtitle>
@@ -191,7 +191,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
                       (click)="logout()"
                       [disabled]="isLoggingOut">
                 <mat-spinner diameter="20" *ngIf="isLoggingOut"></mat-spinner>
-                <mat-icon *ngIf="!isLoggingOut">logout</mat-icon>
+                <i *ngIf="!isLoggingOut" class="fas fa-sign-out-alt"></i>
                 {{ isLoggingOut ? 'Signing Out...' : 'Sign Out' }}
               </button>
 
@@ -200,7 +200,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
                       (click)="quickLogout()"
                       [disabled]="isLoggingOut"
                       matTooltip="Clear local session only">
-                <mat-icon>clear</mat-icon>
+                <i class="fas fa-times"></i>
                 Quick Logout
               </button>
             </div>
@@ -211,7 +211,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
         <mat-card class="debug-card" *ngIf="showDebugInfo">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>code</mat-icon>
+              <i class="fas fa-code"></i>
               Debug Information
             </mat-card-title>
           </mat-card-header>
@@ -228,7 +228,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
             </div>
 
             <button mat-button (click)="showDebugInfo = false">
-              <mat-icon>visibility_off</mat-icon>
+              <i class="fas fa-eye-slash"></i>
               Hide Debug Info
             </button>
           </mat-card-content>
@@ -238,7 +238,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
           <button mat-icon-button 
                   (click)="showDebugInfo = !showDebugInfo"
                   matTooltip="Toggle debug information">
-            <mat-icon>{{ showDebugInfo ? 'bug_report' : 'code' }}</mat-icon>
+            <i class="fas" [class.fa-bug]="showDebugInfo" [class.fa-code]="!showDebugInfo"></i>
           </button>
         </div>
       </div>
@@ -313,7 +313,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
       justify-content: center;
     }
 
-    .user-avatar mat-icon {
+    .user-avatar i {
       font-size: 32px;
       width: 32px;
       height: 32px;
@@ -331,7 +331,7 @@ import { AuthService, User } from '../../core/auth/auth.service';
       margin-bottom: 20px;
     }
 
-    .detail-item mat-icon {
+    .detail-item i {
       color: rgba(255, 255, 255, 0.8);
       margin-top: 2px;
     }
