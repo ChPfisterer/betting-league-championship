@@ -61,6 +61,15 @@ export interface Match {
   competition?: Competition;
   home_team?: Team;
   away_team?: Team;
+  // Temporary additional fields for compatibility with dashboard components
+  stage?: string;
+  leagueId?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  homeTeamLogo?: string;
+  awayTeamLogo?: string;
+  kickoff?: Date;
+  liveData?: any;
 }
 
 export interface Bet {
@@ -75,6 +84,12 @@ export interface Bet {
   placed_at: string;
   status: 'pending' | 'won' | 'lost' | 'void';
   match?: Match;
+  // Temporary additional fields for compatibility with dashboard components
+  prediction?: string;
+  stake?: number;
+  potentialWin?: number;
+  placedAt?: Date;
+  pointsEarned?: number;
 }
 
 export interface UserStats {
@@ -251,11 +266,11 @@ export class ApiService {
 
   placeBet(betData: {
     match_id: string;
-    bet_type: string;
-    amount: number;
-    odds: number;
-    potential_payout: number;
-    outcome: string;
+    outcome?: string;
+    predicted_home_score?: number;
+    predicted_away_score?: number;
+    notes?: string;
+    group_id?: string;
   }): Observable<Bet> {
     return this.http.post<Bet>(`${this.baseUrl}/bets/`, betData);
   }

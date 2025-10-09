@@ -7,7 +7,7 @@ in backend/tests/models/test_bet_model.py.
 """
 
 from sqlalchemy import (
-    Column, String, Boolean, DateTime, Text, 
+    Column, String, Boolean, DateTime, Text, Integer,
     CheckConstraint, Index, ForeignKey, JSON, Numeric
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -107,27 +107,22 @@ class Bet(Base):
         comment="Market type (match_winner, over_under, etc.)"
     )
     
-    # Financial information
-    stake_amount = Column(
-        Numeric(10, 2),
-        nullable=False,
-        comment="Amount staked on the bet"
+    # Prediction information - no financial fields for simple prediction contest
+    predicted_home_score = Column(
+        Integer,
+        nullable=True,
+        comment="User's prediction for home team score"
     )
-    odds = Column(
-        Numeric(8, 3),
-        nullable=False,
-        comment="Odds at which the bet was placed"
+    predicted_away_score = Column(
+        Integer,
+        nullable=True,
+        comment="User's prediction for away team score"
     )
-    potential_payout = Column(
-        Numeric(12, 2),
+    points_earned = Column(
+        Integer,
         nullable=False,
-        comment="Potential payout if bet wins"
-    )
-    payout_amount = Column(
-        Numeric(12, 2),
-        nullable=False,
-        default=Decimal('0.00'),
-        comment="Actual payout amount"
+        default=0,
+        comment="Points earned from this prediction (0, 1, or 3)"
     )
     commission = Column(
         Numeric(8, 2),
@@ -240,24 +235,8 @@ class Bet(Base):
             name="ck_bets_risk_category"
         ),
         CheckConstraint(
-            "stake_amount > 0",
-            name="ck_bets_stake_amount_positive"
-        ),
-        CheckConstraint(
-            "odds >= 1.01",
-            name="ck_bets_odds_minimum"
-        ),
-        CheckConstraint(
-            "potential_payout >= stake_amount",
-            name="ck_bets_potential_payout_minimum"
-        ),
-        CheckConstraint(
-            "payout_amount >= 0",
-            name="ck_bets_payout_amount_non_negative"
-        ),
-        CheckConstraint(
-            "commission >= 0",
-            name="ck_bets_commission_non_negative"
+            "points_earned >= 0 AND points_earned <= 3",
+            name="ck_bets_points_earned_range"
         ),
         CheckConstraint(
             "settled_at IS NULL OR settled_at >= placed_at",
@@ -289,27 +268,14 @@ class Bet(Base):
         if 'market_type' not in kwargs or not kwargs['market_type']:
             raise ValueError("Market type is required")
         
-        if 'stake_amount' not in kwargs or kwargs['stake_amount'] is None:
-            raise ValueError("Stake amount is required")
-        
-        if 'odds' not in kwargs or kwargs['odds'] is None:
-            raise ValueError("Odds are required")
+        # For prediction contest, no financial requirements
         
         # Set default values if not provided
         if 'status' not in kwargs:
             kwargs['status'] = BetStatus.PENDING.value
             
-        if 'commission' not in kwargs:
-            kwargs['commission'] = Decimal('0.00')
-            
-        if 'bonus_applied' not in kwargs:
-            kwargs['bonus_applied'] = False
-            
-        if 'risk_category' not in kwargs:
-            kwargs['risk_category'] = RiskCategory.NORMAL.value
-            
-        if 'payout_amount' not in kwargs:
-            kwargs['payout_amount'] = Decimal('0.00')
+        if 'points_earned' not in kwargs:
+            kwargs['points_earned'] = 0
             
         if 'placed_at' not in kwargs:
             kwargs['placed_at'] = datetime.now(timezone.utc)
@@ -320,10 +286,6 @@ class Bet(Base):
         if 'updated_at' not in kwargs:
             kwargs['updated_at'] = datetime.now(timezone.utc)
         
-        # Calculate potential payout if not provided
-        if 'potential_payout' not in kwargs:
-            kwargs['potential_payout'] = kwargs['stake_amount'] * kwargs['odds']
-            
         # Generate UUID if not provided
         if 'id' not in kwargs:
             kwargs['id'] = uuid.uuid4()
@@ -369,39 +331,16 @@ class Bet(Base):
         
         return market_type
     
-    @validates('stake_amount')
-    def validate_stake_amount(self, key: str, stake_amount: Decimal) -> Decimal:
-        """Validate stake amount."""
-        if stake_amount is None:
-            raise ValueError("Stake amount is required")
+    @validates('points_earned')
+    def validate_points_earned(self, key: str, points: int) -> int:
+        """Validate points earned."""
+        if points is None:
+            points = 0
         
-        stake_amount = Decimal(str(stake_amount))
+        if points < 0 or points > 3:
+            raise ValueError("Points earned must be between 0 and 3")
         
-        if stake_amount <= 0:
-            raise ValueError("Stake amount must be greater than 0")
-        
-        # Reasonable maximum stake limit
-        if stake_amount > Decimal('10000.00'):
-            raise ValueError("Stake amount cannot exceed 10,000")
-        
-        return stake_amount
-    
-    @validates('odds')
-    def validate_odds(self, key: str, odds: Decimal) -> Decimal:
-        """Validate odds."""
-        if odds is None:
-            raise ValueError("Odds are required")
-        
-        odds = Decimal(str(odds))
-        
-        if odds < Decimal('1.01'):
-            raise ValueError("Odds must be at least 1.01")
-        
-        # Reasonable maximum odds limit
-        if odds > Decimal('1000.00'):
-            raise ValueError("Odds cannot exceed 1000.00")
-        
-        return odds
+        return points
     
     @validates('status')
     def validate_status(self, key: str, status: str) -> str:
@@ -445,40 +384,29 @@ class Bet(Base):
     
     @property
     def profit_loss(self) -> Decimal:
-        """Calculate profit/loss for settled bets."""
-        if not self.is_settled:
-            return Decimal('0.00')
-        
-        if self.status == BetStatus.WON.value:
-            return self.payout_amount - self.stake_amount - self.commission
-        elif self.status == BetStatus.LOST.value:
-            return -self.stake_amount
-        else:  # VOID
-            return Decimal('0.00')
+        """Calculate profit/loss (for prediction contest, this is just points earned)."""
+        return Decimal(str(self.points_earned))
     
-    @property
+    @property 
     def return_on_investment(self) -> Optional[Decimal]:
-        """Calculate ROI percentage."""
-        if not self.is_settled or self.stake_amount == 0:
-            return None
-        
-        return (self.profit_loss / self.stake_amount) * 100
+        """Calculate ROI percentage (not applicable for prediction contest)."""
+        return None
     
     # Business logic methods
-    def settle_bet(self, result: str, payout: Optional[Decimal] = None) -> None:
-        """Settle the bet with result."""
+    def settle_bet(self, result: str, points: int = 0) -> None:
+        """Settle the prediction with result."""
         if self.is_settled:
             raise ValueError("Bet is already settled")
         
         if result == 'won':
             self.status = BetStatus.WON.value
-            self.payout_amount = payout or self.potential_payout
+            self.points_earned = points
         elif result == 'lost':
             self.status = BetStatus.LOST.value
-            self.payout_amount = Decimal('0.00')
+            self.points_earned = 0
         elif result == 'void':
             self.status = BetStatus.VOID.value
-            self.payout_amount = self.stake_amount  # Return stake
+            self.points_earned = 0
         else:
             raise ValueError("Invalid settlement result. Must be 'won', 'lost', or 'void'")
         
@@ -494,20 +422,21 @@ class Bet(Base):
         self.settled_at = datetime.now(timezone.utc)
     
     def void_bet(self, reason: str) -> None:
-        """Void the bet and return stake."""
+        """Void the prediction."""
         self.status = BetStatus.VOID.value
         self.void_reason = reason
-        self.payout_amount = self.stake_amount
+        self.points_earned = 0
         self.settled_at = datetime.now(timezone.utc)
     
-    def apply_bonus(self, promotion_id: Union[str, uuid.UUID], bonus_amount: Decimal) -> None:
-        """Apply a bonus to the bet."""
+    def apply_bonus(self, promotion_id: Union[str, uuid.UUID], bonus_points: int) -> None:
+        """Apply a bonus to the prediction."""
         if self.bonus_applied:
-            raise ValueError("Bonus already applied to this bet")
+            raise ValueError("Bonus already applied to this prediction")
         
         self.bonus_applied = True
         self.promotion_id = promotion_id
-        self.potential_payout += bonus_amount
+        # For prediction contest, bonus could be extra points
+        self.points_earned += bonus_points
     
     def update_risk_category(self, category: str) -> None:
         """Update risk category."""
@@ -548,7 +477,7 @@ class Bet(Base):
     # Representation
     def __repr__(self) -> str:
         """String representation of Bet."""
-        return f"<Bet(id={self.id}, user_id={self.user_id}, stake={self.stake_amount}, odds={self.odds}, status='{self.status}')>"
+        return f"<Bet(id={self.id}, user_id={self.user_id}, predicted_scores={self.predicted_home_score}-{self.predicted_away_score}, points={self.points_earned}, status='{self.status}')>"
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert Bet to dictionary."""
@@ -558,10 +487,9 @@ class Bet(Base):
             'match_id': str(self.match_id),
             'bet_type': self.bet_type,
             'market_type': self.market_type,
-            'stake_amount': float(self.stake_amount),
-            'odds': float(self.odds),
-            'potential_payout': float(self.potential_payout),
-            'payout_amount': float(self.payout_amount),
+            'predicted_home_score': self.predicted_home_score,
+            'predicted_away_score': self.predicted_away_score,
+            'points_earned': self.points_earned,
             'commission': float(self.commission),
             'selection': self.selection,
             'handicap': float(self.handicap) if self.handicap else None,

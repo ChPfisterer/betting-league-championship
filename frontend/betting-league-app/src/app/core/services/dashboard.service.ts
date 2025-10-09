@@ -13,19 +13,12 @@ export interface DashboardMatch {
   awayTeamLogo: string;
   kickoff: Date;
   status: 'upcoming' | 'live' | 'finished';
-  stage?: string; // e.g., "Group Stage", "Round of 16", "Quarter-final", "Semi-final", "Final"
-  match_type?: string; // Original match type from API
+  stage: string;
   homeScore?: number;
   awayScore?: number;
-  odds: {
-    home: number;
-    draw: number;
-    away: number;
-  };
-  liveData?: {
-    minute: number;
-    possession: { home: number; away: number };
-  };
+  match_type: string;
+  liveData?: any;
+  isInPlay?: boolean;
 }
 
 export interface DashboardBet {
@@ -33,11 +26,15 @@ export interface DashboardBet {
   matchId: string;
   match: string;
   prediction: string;
-  odds: number;
-  stake: number;
-  potentialWin: number;
+  predictedHomeScore?: number;
+  predictedAwayScore?: number;
+  pointsEarned: number;
   status: 'pending' | 'won' | 'lost';
   placedAt: Date;
+  // Temporary mock financial fields for compatibility (will be removed later)
+  odds?: number;
+  stake?: number;
+  potentialWin?: number;
 }
 
 export interface DashboardStats {
@@ -204,7 +201,7 @@ export class DashboardService {
   /**
    * Place a prediction through the API
    */
-  placeBet(matchId: string, prediction: 'home' | 'draw' | 'away', odds: number, confidence: number): Observable<any> {
+  placePrediction(matchId: string, prediction: 'home' | 'draw' | 'away', homeScore?: number, awayScore?: number): Observable<any> {
     // Map frontend prediction to backend BetOutcome enum
     const outcomeMap = {
       'home': 'home_win',
@@ -212,20 +209,22 @@ export class DashboardService {
       'away': 'away_win'
     };
 
-    // Calculate potential payout (required by backend)
-    const amount = confidence; // Use confidence as amount for now (0-10 range)
-    const potentialPayout = amount * odds;
-
     const predictionData = {
       match_id: matchId,
-      bet_type: 'match_winner', // Backend expects this enum value
-      amount: amount,
-      odds: odds,
-      potential_payout: potentialPayout,
-      outcome: outcomeMap[prediction] // Map to backend enum
+      outcome: outcomeMap[prediction], // Map to backend enum
+      predicted_home_score: homeScore,
+      predicted_away_score: awayScore,
+      notes: `Prediction: ${prediction}`
     };
 
     return this.apiService.placeBet(predictionData);
+  }
+
+  /**
+   * Legacy method name for backward compatibility
+   */
+  placeBet(matchId: string, prediction: 'home' | 'draw' | 'away'): Observable<any> {
+    return this.placePrediction(matchId, prediction);
   }
 
   /**
@@ -244,8 +243,7 @@ export class DashboardService {
       stage: this.determineMatchStage(match),
       homeScore: match.home_score,
       awayScore: match.away_score,
-      match_type: match.match_type,
-      odds: this.generateOdds(match), // TODO: Get real odds from API
+      match_type: match.match_type || 'regular',
       liveData: match.status === 'live' ? this.generateLiveData() : undefined
     };
   }
@@ -263,11 +261,15 @@ export class DashboardService {
       matchId: bet.match_id,
       match: matchDisplay,
       prediction: this.formatPrediction(bet.predicted_outcome, bet.match),
-      odds: bet.odds,
-      stake: bet.stake_amount,
-      potentialWin: bet.potential_payout,
+      predictedHomeScore: (bet as any).predicted_home_score,
+      predictedAwayScore: (bet as any).predicted_away_score,
+      pointsEarned: (bet as any).points_earned || 0,
       status: bet.status as 'pending' | 'won' | 'lost',
-      placedAt: new Date(bet.placed_at)
+      placedAt: new Date(bet.placed_at),
+      // Temporary mock financial fields for compatibility
+      odds: 2.0,
+      stake: 10,
+      potentialWin: 20
     };
   }
 
@@ -346,18 +348,6 @@ export class DashboardService {
 
   /**
    * Generate odds for a match (placeholder until we have real odds API)
-   */
-  private generateOdds(match: Match): { home: number; draw: number; away: number } {
-    // TODO: Get real odds from betting API
-    // For now, generate realistic-looking odds
-    const base = Math.random() * 0.5 + 1.5; // 1.5 to 2.0
-    return {
-      home: Number((base + Math.random() * 1).toFixed(2)),
-      draw: Number((3.0 + Math.random() * 0.8).toFixed(2)),
-      away: Number((base + Math.random() * 1.5).toFixed(2))
-    };
-  }
-
   /**
    * Generate live match data (placeholder until we have real live data)
    */
