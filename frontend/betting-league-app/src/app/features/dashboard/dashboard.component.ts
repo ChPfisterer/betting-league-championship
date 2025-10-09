@@ -43,7 +43,7 @@ interface Bet extends DashboardBet {}
       <mat-card class="welcome-card">
         <mat-card-header>
           <mat-card-title>
-            <mat-icon>sports</mat-icon>
+            <i class="fas fa-trophy"></i>
             Welcome back, {{ currentUser?.firstName || currentUser?.username || 'Champion' }}!
           </mat-card-title>
           <mat-card-subtitle>Your betting dashboard • {{ getCurrentTime() }}</mat-card-subtitle>
@@ -78,7 +78,7 @@ interface Bet extends DashboardBet {}
                     <mat-card-header>
                       <div class="match-header">
                         <mat-chip color="accent">
-                          <mat-icon>radio_button_checked</mat-icon>
+                          <i class="fas fa-circle text-red-500"></i>
                           LIVE {{ match.liveData?.minute }}'
                         </mat-chip>
                         <span class="league-name">{{ getLeagueName(match.leagueId) }}</span>
@@ -198,7 +198,7 @@ interface Bet extends DashboardBet {}
                   <mat-card *ngFor="let league of leagues" class="league-card" (click)="viewLeague(league)">
                     <mat-card-header>
                       <div mat-card-avatar>
-                        <mat-icon>{{ league.icon }}</mat-icon>
+                        <i class="fas fa-futbol"></i>
                       </div>
                       <mat-card-title>{{ league.name }}</mat-card-title>
                       <mat-card-subtitle>{{ league.country }} • {{ league.season }}</mat-card-subtitle>
@@ -281,7 +281,7 @@ interface Bet extends DashboardBet {}
             </mat-progress-bar>
             <div class="rank-actions">
               <button mat-raised-button color="primary">
-                <mat-icon>leaderboard</mat-icon>
+                <i class="fas fa-ranking-star"></i>
                 View Full Leaderboard
               </button>
             </div>
@@ -631,7 +631,7 @@ interface Bet extends DashboardBet {}
       background: white;
     }
 
-    mat-chip mat-icon {
+    mat-chip i {
       margin-right: 4px !important;
       font-size: 16px;
     }

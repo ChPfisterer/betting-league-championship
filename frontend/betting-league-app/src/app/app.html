@@ -2,7 +2,7 @@
   <header class="app-header" *ngIf="isAuthenticated$ | async">
     <nav class="navbar">
       <div class="nav-brand">
-        <mat-icon class="brand-icon">sports_soccer</mat-icon>
+        <i class="fas fa-futbol brand-icon"></i>
         <span class="brand-text">Betting Championship</span>
       </div>
       
@@ -11,7 +11,7 @@
           Welcome, {{ user.firstName || user.username }}!
         </span>
         <button mat-icon-button (click)="logout()" title="Logout">
-          <mat-icon>logout</mat-icon>
+          <i class="fas fa-sign-out-alt"></i>
         </button>
       </div>
     </nav>
